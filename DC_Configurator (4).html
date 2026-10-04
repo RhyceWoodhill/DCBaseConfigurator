@@ -1,0 +1,2430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DreamCatcher Base Config — EFP Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg: #12151a;
+    --panel: #1a1f27;
+    --panel-2: #20262f;
+    --hairline: #2b323d;
+    --text: #e8ecf1;
+    --text-dim: #8892a0;
+    --text-faint: #5b6472;
+    --tally-green: #21c96f;
+    --tally-green-dim: #163a29;
+    --tally-red: #e8453c;
+    --tally-red-dim: #3d1e1c;
+    --amber: #f2a93a;
+    --amber-dim: #3a2f16;
+    --mono: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace;
+    --sans: 'IBM Plex Sans', -apple-system, Segoe UI, sans-serif;
+  }
+  @font-face{ font-family: 'IBM Plex Mono'; src: local('IBM Plex Mono'); }
+  * { box-sizing: border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--sans); }
+  body{ min-height:100vh; }
+  a { color: inherit; }
+
+  .rack {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+
+  .rack-header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:1px solid var(--hairline);
+    padding-bottom:18px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .rack-header h1{
+    font-size:19px;
+    font-weight:600;
+    letter-spacing:0.2px;
+    margin:0;
+  }
+  .rack-header h1 .dim{ color:var(--text-dim); font-weight:400; }
+  .rack-tag{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-faint);
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+  }
+  @media (max-width: 880px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    margin-bottom:16px;
+    overflow:hidden;
+  }
+  .card-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 16px;
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+  }
+  .card-head .section-tag{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--tally-green);
+    font-weight:600;
+  }
+  .card-head .section-sub{
+    font-size:11px;
+    color:var(--text-faint);
+  }
+  .card-body{ padding:16px; }
+
+  .grid2{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px 16px;
+  }
+  @media (max-width:560px){ .grid2{ grid-template-columns: 1fr; } }
+
+  .field{ margin-bottom:4px; }
+  .field label{
+    display:block;
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--text-dim);
+    margin-bottom:5px;
+  }
+  .field label .key{ color: #9fb0c3; }
+  select, input[type=text], input[type=number]{
+    width:100%;
+    background:#0e1116;
+    border:1px solid var(--hairline);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:13px;
+    padding:8px 10px;
+    border-radius:4px;
+    outline:none;
+  }
+  select:focus, input:focus{ border-color: var(--tally-green); }
+
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 0;
+    border-bottom:1px solid var(--hairline);
+  }
+  .toggle-row:last-child{ border-bottom:none; }
+  .toggle-label{
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--text);
+  }
+  .switch{
+    position:relative;
+    width:42px;
+    height:22px;
+    flex:none;
+    cursor:pointer;
+  }
+  .switch input{ display:none; }
+  .switch .track{
+    position:absolute; inset:0;
+    background:var(--tally-red-dim);
+    border:1px solid var(--tally-red);
+    border-radius:11px;
+    transition: background .15s, border-color .15s;
+  }
+  .switch .knob{
+    position:absolute;
+    top:2px; left:2px;
+    width:16px; height:16px;
+    border-radius:50%;
+    background:var(--tally-red);
+    transition: left .15s, background .15s;
+  }
+  .switch input:checked + .track{
+    background:var(--tally-green-dim);
+    border-color:var(--tally-green);
+  }
+  .switch input:checked + .track .knob{ left:22px; background:var(--tally-green); }
+  .switch input:checked ~ .knob{ left:22px; background:var(--tally-green); }
+
+  .ip-list{ display:flex; flex-direction:column; gap:8px; }
+  .ip-row{ display:flex; gap:8px; }
+  .ip-row input{ flex:1; }
+  .btn-mini{
+    background:#0e1116;
+    border:1px solid var(--hairline);
+    color:var(--text-dim);
+    font-family:var(--mono);
+    font-size:12px;
+    padding:0 12px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .btn-mini:hover{ border-color:var(--tally-red); color:var(--tally-red); }
+  .btn-add{
+    margin-top:8px;
+    background:transparent;
+    border:1px dashed var(--hairline);
+    color:var(--text-dim);
+    font-family:var(--mono);
+    font-size:12px;
+    padding:7px 10px;
+    border-radius:4px;
+    cursor:pointer;
+    width:100%;
+    text-align:left;
+  }
+  .btn-add:hover{ border-color:var(--tally-green); color:var(--tally-green); }
+
+  .notice{
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+    font-size:12px;
+    color:var(--amber);
+    background:var(--amber-dim);
+    border:1px solid #5a4720;
+    border-radius:4px;
+    padding:9px 11px;
+    margin-top:12px;
+    font-family:var(--mono);
+    line-height:1.5;
+  }
+
+  .dropzone{
+    border:1px dashed var(--hairline);
+    border-radius:5px;
+    padding:18px;
+    text-align:center;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-faint);
+    cursor:pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .dropzone:hover, .dropzone.drag{ border-color:var(--tally-green); color:var(--tally-green); }
+  .file-chip{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#0e1116;
+    border:1px solid var(--hairline);
+    border-radius:4px;
+    padding:7px 10px;
+    margin-top:8px;
+    font-family:var(--mono);
+    font-size:12px;
+  }
+  .file-chip .path{ color: var(--text-dim); }
+  .file-chip .path b{ color: var(--text); font-weight:500; }
+
+  /* preview / terminal column */
+  .term{
+    position:sticky;
+    top:20px;
+    background:#0b0d11;
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .term-head{
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px;
+    background:var(--panel-2);
+    border-bottom:1px solid var(--hairline);
+  }
+  .term-dot{ width:9px; height:9px; border-radius:50%; }
+  .term-title{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--text-faint);
+    margin-left:4px;
+  }
+  .term-body{
+    font-family:var(--mono);
+    font-size:11.5px;
+    line-height:1.65;
+    padding:14px;
+    max-height:520px;
+    overflow-y:auto;
+    white-space:pre-wrap;
+    word-break:break-all;
+  }
+  .term-body .l-add{ color:var(--tally-green); }
+  .term-body .l-del{ color:var(--tally-red); opacity:.75; }
+  .term-body .l-cmt{ color:var(--text-faint); }
+  .term-body .l-sec{ color:#9fb0c3; }
+
+  .generate-bar{
+    margin-top:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .field-inline{
+    display:flex;
+    gap:10px;
+  }
+  .field-inline .field{ flex:1; }
+
+  .btn-generate{
+    background:var(--tally-green);
+    color:#08130d;
+    border:none;
+    font-family:var(--mono);
+    font-weight:600;
+    font-size:13.5px;
+    letter-spacing:0.3px;
+    padding:13px 16px;
+    border-radius:5px;
+    cursor:pointer;
+    transition: filter .12s;
+  }
+  .btn-generate:hover{ filter:brightness(1.08); }
+  .btn-generate:active{ filter:brightness(0.94); }
+  .btn-generate:disabled{ background:var(--hairline); color:var(--text-faint); cursor:not-allowed; }
+
+  .status-line{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--text-faint);
+    text-align:center;
+    min-height:16px;
+  }
+  .status-line.ok{ color:var(--tally-green); }
+  .status-line.err{ color:var(--tally-red); }
+
+  .srv-table-wrap{
+    overflow-x: auto;
+    margin-top: 12px;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+  }
+  .srv-table{ width:auto; border-collapse:collapse; }
+  .srv-table th{
+    text-align:left;
+    font-family:var(--mono);
+    font-size:10.5px;
+    color:var(--text-faint);
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+    padding:0 8px 6px;
+    font-weight:500;
+  }
+  .srv-table td{ padding:4px 8px 4px 0; }
+  .srv-table input{ font-size:12.5px; padding:6px 8px; width:150px; min-width:150px; }
+  .srv-table th{ white-space:nowrap; }
+  .srv-table .idx{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-faint);
+    width:22px;
+    padding-right:4px;
+  }
+  .srv-table .rm-col{ width:28px; }
+  .cascade-row{
+    display:grid;
+    grid-template-columns: 1fr 90px 90px;
+    gap:10px 16px;
+    margin-bottom:10px;
+  }
+  .cascade-row-2{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px 16px;
+    margin-bottom:4px;
+  }
+  .btn-secondary{
+    background:transparent;
+    border:1px solid var(--tally-green);
+    color:var(--tally-green);
+    font-family:var(--mono);
+    font-size:12px;
+    padding:8px 12px;
+    border-radius:4px;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .btn-secondary:hover{ background:var(--tally-green-dim); }
+  .has-tip{ cursor:help; border-bottom:1px dotted var(--text-faint); }
+  #tipBox{
+    position:fixed; z-index:9999; display:none; max-width:340px;
+    background:#0e1116; border:1px solid var(--tally-green); color:var(--text);
+    font-family:var(--sans); font-size:12px; line-height:1.5;
+    padding:9px 11px; border-radius:5px; pointer-events:none;
+    box-shadow:0 6px 24px rgba(0,0,0,.5);
+  }
+  #tipBox .tip-key{ display:block; font-family:var(--mono); font-size:11px; color:var(--tally-green); margin-bottom:4px; }
+  /* per-server overrides */
+  .ps-hint{ font-size:12px; color:var(--text-dim); line-height:1.5; margin:0 0 12px; }
+  .ps-sub{ font-family:var(--mono); font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.5px; margin:18px 0 8px; }
+  .ps-sub .off{ color:var(--amber); text-transform:none; letter-spacing:0; margin-left:6px; }
+  .ps-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; }
+  .ps-head .ps-title{ font-family:var(--mono); font-size:13px; color:var(--text); }
+  .ps-note{ font-family:var(--mono); font-size:10.5px; color:var(--amber); margin-left:8px; }
+  .ps-reset{ background:#0e1116; border:1px solid var(--hairline); color:var(--text-dim); font-family:var(--mono); font-size:11px; padding:1px 7px; border-radius:3px; cursor:pointer; margin-left:8px; }
+  .ps-reset:hover{ border-color:var(--amber); color:var(--amber); }
+  .field.ovr select, .field.ovr input{ border-color:var(--amber); }
+  .toggle-row.ovr .toggle-label{ color:var(--amber); }
+  .srv-table input.ovr{ border-color:var(--amber); }
+  .srv-table input.num{ width:84px; min-width:84px; }
+  .srv-table th .gl{ display:block; color:var(--text-faint); text-transform:none; letter-spacing:0; font-size:10px; }
+  .srv-table td.ps-sum{ font-family:var(--mono); font-size:11px; color:var(--text-dim); white-space:normal; min-width:160px; max-width:300px; padding-right:12px; }
+  .srv-table tr.ps-sel td{ background:#12171e; }
+  .preview-select-wrap{
+    padding:10px 14px;
+    border-bottom:1px solid var(--hairline);
+    background:#0e1116;
+  }
+  .preview-select-wrap select{ width:100%; font-size:12px; padding:6px 8px; }
+
+  .iface-list{ margin: 10px 0 4px; }
+  .iface-row{
+    display:grid;
+    grid-template-columns: 24px 96px 1fr 1fr;
+    align-items:center;
+    gap:10px;
+    padding:7px 0;
+    border-bottom:1px solid var(--hairline);
+  }
+  .iface-row:last-child{ border-bottom:none; }
+  .iface-row .iface-label{
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--text);
+  }
+  .iface-row .iface-mac{
+    display:block;
+    font-size:10.5px;
+    color:var(--text-faint);
+    margin-top:1px;
+  }
+  .iface-row input[type=checkbox]{
+    width:16px; height:16px;
+    accent-color: var(--tally-green);
+  }
+  .iface-row input[type=text]{ font-size:12.5px; padding:6px 8px; }
+  .iface-row.disabled .iface-label{ color: var(--text-faint); }
+  .iface-row.disabled input[type=text]{ opacity:0.45; }
+
+  .section-disabled{ opacity:0.35; pointer-events:none; filter: grayscale(0.4); }
+
+  .card-head-left{ display:flex; align-items:center; gap:9px; }
+  .section-toggle{
+    width:16px; height:16px;
+    accent-color: var(--tally-green);
+    flex:none;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="rack">
+  <div class="rack-header">
+    <h1>DreamCatcher Base Config <span class="dim">— EFP Builder</span></h1>
+    <div class="rack-tag">/etc/dreamcatcher.ini · /etc/features.conf · /etc/vue/layouts/</div>
+  </div>
+
+  <div class="layout">
+    <div>
+
+      <!-- TIMEZONE -->
+      <div class="card" id="timezoneCard">
+        <div class="card-head">
+          <div class="card-head-left">
+            <input type="checkbox" class="section-toggle" id="toggleTimezone" checked>
+            <span class="section-tag">/etc/timezone</span>
+          </div>
+          <span class="section-sub">also relinks /etc/localtime</span>
+        </div>
+        <div class="card-body">
+          <div class="field" style="max-width:280px;">
+            <label><span class="key">timezone</span></label>
+            <select id="timezoneSelect">
+              <option value="America/Chicago">Chicago</option>
+              <option value="America/New_York" selected>New York</option>
+              <option value="America/Denver">Denver</option>
+              <option value="America/Los_Angeles">Los Angeles</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- BULK DEPLOYMENT -->
+      <div class="card">
+        <div class="card-head">
+          <span class="section-tag">Bulk deployment</span>
+          <span class="section-sub">/etc/hostname · /etc/netplan/01-netcfg.yaml</span>
+        </div>
+        <div class="card-body">
+          <label style="display:flex; align-items:center; gap:9px; margin-bottom:14px; cursor:pointer;">
+            <input type="checkbox" class="section-toggle" id="toggleHostname" checked>
+            <span class="toggle-label" style="font-size:12.5px;">write /etc/hostname on target (table below is always used to name each downloaded .efp)</span>
+          </label>
+          <div class="cascade-row">
+            <div class="field">
+              <label>Hostname prefix</label>
+              <input type="text" id="bulkPrefix" value="REPLAY-">
+            </div>
+            <div class="field">
+              <label>Start #</label>
+              <input type="number" id="bulkStart" value="1">
+            </div>
+            <div class="field">
+              <label>Server count</label>
+              <input type="number" id="bulkCount" value="4" min="1">
+            </div>
+          </div>
+
+          <div class="iface-list" id="netplanIfaceList"></div>
+
+          <button class="btn-secondary" id="regenBtn">↻ Regenerate cascade</button>
+
+          <div class="srv-table-wrap">
+            <table class="srv-table">
+              <thead id="serverTableHead"></thead>
+              <tbody id="serverTableBody"></tbody>
+            </table>
+          </div>
+          <button class="btn-add" id="addServerBtn">+ add server</button>
+        </div>
+      </div>
+
+      <!-- MATROX PORTS -->
+      <div class="card" id="matroxCard">
+        <div class="card-head">
+          <span class="section-tag">Matrox network ports</span>
+          <span class="section-sub">optional — /etc/NetworkManager/system-connections/</span>
+        </div>
+        <div class="card-body">
+          <div class="iface-list" id="matroxIfaceList"></div>
+        </div>
+      </div>
+
+
+      <!-- SYSTEM -->
+      <div class="card" id="systemCard">
+        <div class="card-head">
+          <div class="card-head-left">
+            <input type="checkbox" class="section-toggle" id="toggleSystem" checked>
+            <span class="section-tag">[System]</span>
+          </div>
+          <span class="section-sub">patched in place — everything else in the file is left alone</span>
+        </div>
+        <div class="card-body">
+          <div class="grid2" id="systemFields"></div>
+
+          <div class="field" style="margin-top:14px;">
+            <label><span class="key">remotes</span> — replay group IP addresses</label>
+            <div class="ip-list" id="ipList"></div>
+            <button class="btn-add" id="addIpBtn">+ add remote IP</button>
+          </div>
+
+          <div class="notice" id="jpegxsNotice" style="display:none;">
+            ⚠ video_codec = jpegxs (baseline or a server override) — those packages will also install the JPEG-XS license
+            (binds to the target server's own /etc/machine-id at install time).
+          </div>
+        </div>
+      </div>
+
+      <!-- FEATURES -->
+      <div class="card" id="featuresCard">
+        <div class="card-head">
+          <div class="card-head-left">
+            <input type="checkbox" class="section-toggle" id="toggleFeatures" checked>
+            <span class="section-tag">features.conf</span>
+          </div>
+          <span class="section-sub">toggle true / false per flag</span>
+        </div>
+        <div class="card-body" id="featureToggles"></div>
+      </div>
+
+      <!-- PER-SERVER OVERRIDES -->
+      <div class="card" id="perServerCard">
+        <div class="card-head">
+          <span class="section-tag">Per-server settings</span>
+          <span class="section-sub">inputs/outputs, [System] and features per server</span>
+        </div>
+        <div class="card-body">
+          <p class="ps-hint">
+            The [System] and features.conf values above are the baseline for every server.
+            Change a value here to pin it for just that server (highlighted in amber, ↺ puts it back
+            on the baseline). Pinned values stay put if you change the baseline later.
+            Color space, transfer, bit rate, proxies, codec, video standard and audio channels are global only (shown greyed out). The server selected here is the one shown in the install preview.
+          </p>
+          <div class="srv-table-wrap">
+            <table class="srv-table">
+              <thead id="psOverviewHead"></thead>
+              <tbody id="psOverviewBody"></tbody>
+            </table>
+          </div>
+          <button class="btn-secondary" id="psClearAllBtn">↺ Clear all per-server overrides</button>
+
+          <div class="field" style="margin-top:16px;">
+            <label>Edit server</label>
+            <select id="psServerSelect"></select>
+          </div>
+          <div id="psDetail"></div>
+        </div>
+      </div>
+
+      <!-- RENDER DELAY -->
+      <div class="card" id="renderDelayCard">
+        <div class="card-head">
+          <div class="card-head-left">
+            <input type="checkbox" class="section-toggle" id="toggleRenderDelay" checked>
+            <span class="section-tag">render_delay.json</span>
+          </div>
+          <span class="section-sub">written to /etc/default/render_delay.json</span>
+        </div>
+        <div class="card-body">
+          <div class="grid2" id="renderDelayFields"></div>
+        </div>
+      </div>
+
+      <!-- LAYOUTS -->
+      <div class="card" id="layoutsCard">
+        <div class="card-head">
+          <div class="card-head-left">
+            <input type="checkbox" class="section-toggle" id="toggleLayouts" checked>
+            <span class="section-tag">Vue layouts</span>
+          </div>
+          <span class="section-sub">copied to /etc/vue/layouts/</span>
+        </div>
+        <div class="card-body">
+          <div class="dropzone" id="dropzone">
+            drop MON layout files here, or click to browse<br>(e.g. VENUE_1_MON_CLIP_PLAYER, VENUE_2_MON_DEFAULT_REPLAY)
+          </div>
+          <input type="file" id="fileInput" multiple style="display:none;">
+          <div id="fileChips"></div>
+        </div>
+      </div>
+
+      <!-- IMAGES -->
+      <div class="card" id="imagesCard">
+        <div class="card-head">
+          <div class="card-head-left">
+            <input type="checkbox" class="section-toggle" id="toggleImages" checked>
+            <span class="section-tag">Vue images</span>
+          </div>
+          <span class="section-sub">copied to /etc/vue/images/</span>
+        </div>
+        <div class="card-body">
+          <div class="dropzone" id="imageDropzone">
+            drop image files here, or click to browse
+          </div>
+          <input type="file" id="imageFileInput" multiple style="display:none;">
+          <div id="imageFileChips"></div>
+        </div>
+      </div>
+
+
+      <!-- FIREWALL -->
+      <div class="card" id="firewallCard">
+        <div class="card-head">
+          <span class="section-tag">Linux firewall</span>
+          <span class="section-sub">runs on the target at install</span>
+        </div>
+        <div class="card-body">
+          <div class="toggle-row" style="border-bottom:none; padding-top:0;">
+            <div class="toggle-label">turn off firewall (ufw / firewalld)</div>
+            <label class="switch">
+              <input type="checkbox" id="toggleFirewall" checked>
+              <span class="track"><span class="knob"></span></span>
+            </label>
+          </div>
+          <p class="ps-hint" style="margin:6px 0 0;">
+            Stops and disables <code>ufw</code> (and <code>firewalld</code> if present) so it stays off after reboot.
+            The exact commands show in the install preview.
+          </p>
+        </div>
+      </div>
+
+      <!-- PACKAGE INFO -->
+      <div class="card">
+        <div class="card-head">
+          <span class="section-tag">info</span>
+          <span class="section-sub">EFP package metadata</span>
+        </div>
+        <div class="card-body">
+          <div class="grid2">
+            <div class="field">
+              <label>Batch zip filename</label>
+              <input type="text" id="pkgName" value="dreamcatcher-deploy-batch">
+            </div>
+            <div class="field">
+              <label>Description</label>
+              <input type="text" id="pkgDesc" value="DreamCatcher Base Configuration">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PREVIEW / GENERATE -->
+    <div>
+      <div class="term">
+        <div class="term-head">
+          <div class="term-dot" style="background:var(--tally-red)"></div>
+          <div class="term-dot" style="background:var(--amber)"></div>
+          <div class="term-dot" style="background:var(--tally-green)"></div>
+          <div class="term-title">install — preview</div>
+        </div>
+        <div class="preview-select-wrap">
+          <select id="previewSelect"></select>
+        </div>
+        <div class="term-body" id="preview"></div>
+      </div>
+
+      <div class="generate-bar">
+        <button class="btn-generate" id="generateBtn">↓ Generate deployment package</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" id="saveCfgBtn" style="flex:1; margin-top:0;">↓ Save config (.json)</button>
+          <button class="btn-secondary" id="loadCfgBtn" style="flex:1; margin-top:0;">↑ Load config</button>
+          <input type="file" id="loadCfgInput" accept=".json,application/json" style="display:none;">
+        </div>
+        <div class="status-line" id="statusLine"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tipBox"></div>
+
+<script>
+/* ---------------------------------------------------------
+   Field definitions — key, label, type, default, options
+--------------------------------------------------------- */
+const SYSTEM_FIELDS = [
+  { key:'auto_force_worker_pool', type:'bool', def:'false' },
+  { key:'color_space', type:'select', def:'bt709', opts:['bt709','bt2020','bt601'] },
+  { key:'transfer_characteristic', type:'select', def:'bt709', opts:['bt709','pq','hlg'] },
+  { key:'force_worker_pool', type:'number', def:'8' },
+  { key:'bit_rate', type:'number', def:'250' },
+  { key:'proxies_enabled', type:'bool', def:'true' },
+  { key:'video_codec', type:'select', def:'jpegxs', opts:['jpegxs','VC3','mpeg2video'] },
+  { key:'input_format', type:'select', def:'smpte2110', opts:['smpte2110','sdi','sdi12g'] },
+  { key:'output_format', type:'select', def:'smpte2110', opts:['smpte2110','sdi','sdi12g'] },
+  { key:'time_source', type:'select', def:'ptppts', opts:['ptppts','ltc','ltc_anc'] },
+  { key:'ninputs', type:'number', def:'4' },
+  { key:'nsdioutputs', type:'number', def:'2' },
+  { key:'nmontageoutputs', type:'number', def:'6' },
+  { key:'video_standard', type:'select', def:'1080p5994', opts:['1080p5994','1080p50','1080i5994','1080i50','2160p5994','720p5994'] },
+  { key:'io_mode', type:'select', def:'simple', opts:['simple','advanced'] },
+  { key:'num_audio_channels', type:'select', def:'16', opts:['8','16'] },
+];
+
+const RENDER_DELAY_FIELDS = [
+  { key:'proxy', def:5 },
+  { key:'hd', def:5 },
+  { key:'uhd', def:6 },
+  { key:'3g', def:5 },
+];
+
+const FEATURE_DEFAULTS = {
+  FEATURE_BRAVO:false, FEATURE_ZOOM:true, FEATURE_FULL_SCHEDULER:false,
+  FEATURE_DISTRIBUTED_IMPORTS:true, FEATURE_SCHEDULED_CAPTURES:false,
+  FEATURE_CONTINUOUS_RECORDING:true, FEATURE_VUE:true, FEATURE_CLIP_PLAYER:false,
+  FEATURE_WEB_STREAMING:true, FEATURE_CLIP_PULL:false, FEATURE_SCHEDULED_PLAYLISTS:false,
+  FEATURE_CLIP_EXPORTS:true, FEATURE_CLIP_IMPORTS:true, FEATURE_DISTRIBUTED_EXPORTS:true,
+  FEATURE_FOUR_K:true, FEATURE_MOSAIC:true, FEATURE_JSONAPI:true,
+  FEATURE_PLAYLIST_CREATE:true, FEATURE_PLAYTRACKING:true, FEATURE_6_1080P_INPUTS:false,
+  FEATURE_METADATA_COPILOT:false, FEATURE_TIMELINE:false, FEATURE_MOTION_PLUS:false,
+  FEATURE_CLIP_CREATE:true, FEATURE_CENSORSHIP:false, FEATURE_CONTEXT_MENUS:true,
+  // added manually in features.conf (not in the stock file) - optional, off by default
+  FEATURE_PROTECTION:false, FEATURE_FRAME_CHASE:false, FEATURE_MOS:false,
+  FEATURE_VIRTUAL_INPUTS:false, FEATURE_ON_DEMAND:false, FEATURE_COLLECTIONS:false,
+  FEATURE_SOFTWARE_SCALING:false
+};
+
+
+// Hover descriptions shown next to each feature flag (global list and per-server editor)
+const FEATURE_INFO = {
+  FEATURE_BRAVO: "Enable/disable Bravo. Bravo is a product of its own and has its own system/hardware requirements.",
+  FEATURE_ZOOM: "Enable/disable Zoom.",
+  FEATURE_FULL_SCHEDULER: "Enable/disable the Full Scheduler. May be a paid-for feature.",
+  FEATURE_DISTRIBUTED_IMPORTS: "Lets the system import clips across the network (remote jobs).",
+  FEATURE_SCHEDULED_CAPTURES: "Allows scheduled captures (jobs scheduled to run later, not immediately). Off by default so captures still work on systems without reliable content-system time syncing: vueweb then doesn't use the scheduler API for its captures. Turn on only when you need it.",
+  FEATURE_CONTINUOUS_RECORDING: "Does nothing. It was added so continuous record could become a payable option later, but it was never implemented and the flag is ignored.",
+  FEATURE_VUE: "Enable/disable VUE (VAR). VUE is a product of its own.",
+  FEATURE_CLIP_PLAYER: "Enable/disable the Clip Player, hot keys and Rundown widget. A product of its own / paid-for feature.",
+  FEATURE_WEB_STREAMING: "Enable/disable web streaming. (More detail still to be documented.)",
+  FEATURE_CLIP_PULL: "Lets the system pull clips from remote systems.",
+  FEATURE_SCHEDULED_PLAYLISTS: "Scheduled playlists. Not fully documented - possibly the rundown feature from an earlier customer project.",
+  FEATURE_CLIP_EXPORTS: "Lets the system export clips.",
+  FEATURE_CLIP_IMPORTS: "Lets the system import clips.",
+  FEATURE_DISTRIBUTED_EXPORTS: "Lets the system export clips across the network (remote jobs).",
+  FEATURE_FOUR_K: "Configures the system as 4K (2160p / 2160p SQD).",
+  FEATURE_MOSAIC: "Enable/disable Mosaic mode.",
+  FEATURE_JSONAPI: "JSON API. (More detail still to be documented.)",
+  FEATURE_PLAYLIST_CREATE: "Lets operators create playlists.",
+  FEATURE_PLAYTRACKING: "Lets operators create playtracks using the Zoom configuration.",
+  FEATURE_6_1080P_INPUTS: "Allows more than 4 1080p inputs. Leave off on systems whose hardware can't handle that configuration.",
+  FEATURE_METADATA_COPILOT: "Enable/disable Metadata Copilot (now called Highlight Factory). Paid-for feature.",
+  FEATURE_TIMELINE: "Enables the Live Edit feature. Paid-for feature.",
+  FEATURE_CLIP_CREATE: "Lets operators create clips.",
+  FEATURE_CENSORSHIP: "Enable/disable censorship. A product of its own - possibly discontinued, and NOT functional in live media.",
+  FEATURE_PROTECTION: "Enable/disable the protect-clips feature. Not yet fully completed.",
+  FEATURE_FRAME_CHASE: "Adds a UI button to turn frame chasing on/off per output. Controls clip playout position from the timecode of an LTC source.",
+  FEATURE_MOS: "Enables MOS functionality on a playout server. This is a paid option.",
+  FEATURE_VIRTUAL_INPUTS: "Used for a Bravo workflow. Virtual inputs are hidden from clients unless configured to record (or active with recording); they are mostly reserved for the Bravo use case, which automatically adds the Bravo node's inputs. A Bravo node with no storage won't have them. When on, virtuals can be configured with the off-ramp config to an HTTP URL.",
+  FEATURE_ON_DEMAND: "ReVue (on-demand). No further description documented yet.",
+  FEATURE_CONTEXT_MENUS: "Right-click context menus for clips and bins in VUE, for operators who prefer a button-press menu over keyboard shortcuts.",
+  FEATURE_MOTION_PLUS: "Enables Motion Plus. May be a paid-for feature.",
+  FEATURE_COLLECTIONS: "Better organization of a large collection of bins.",
+  FEATURE_SOFTWARE_SCALING: "UDX software scaling (H.264 mezzanine record and playout)."
+};
+
+const IFACE_DEFS = [
+  { key:'net_eth0', group:'netplan', label:'eth0', defaultEnabled:true,  defaultBase:'10.251.0.142/24', defaultGateway:'' },
+  { key:'net_eth1', group:'netplan', label:'eth1', defaultEnabled:false, defaultBase:'10.10.10.104/24', defaultGateway:'' },
+  { key:'net_eth2', group:'netplan', label:'eth2', defaultEnabled:true,  defaultBase:'200.200.200.101/24', defaultGateway:'' },
+  { key:'net_eth3', group:'netplan', label:'eth3', defaultEnabled:false, defaultBase:'210.210.210.104/24', defaultGateway:'' },
+  { key:'net_eth20', group:'netplan', label:'eth20', defaultEnabled:false, defaultBase:'200.200.200.101/24', defaultGateway:'' },
+  { key:'net_eth21', group:'netplan', label:'eth21', defaultEnabled:false, defaultBase:'210.210.210.104/24', defaultGateway:'' },
+  { key:'mvk0', group:'matrox', label:'mvkEthernet0', uuid:'c4444704-f69f-11f0-a870-05766cb7b66c', defaultEnabled:false, defaultBase:'207.207.207.101/24', defaultGateway:'' },
+  { key:'mvk1', group:'matrox', label:'mvkEthernet1', uuid:'c4444705-f69f-11f0-a870-05766cb7b66c', defaultEnabled:false, defaultBase:'208.208.208.101/24', defaultGateway:'' },
+  { key:'mvk2', group:'matrox', label:'mvkEthernet2', uuid:'c4444706-f69f-11f0-a870-05766cb7b66c', defaultEnabled:false, defaultBase:'209.209.209.101/24', defaultGateway:'' },
+  { key:'mvk3', group:'matrox', label:'mvkEthernet3', uuid:'c4444707-f69f-11f0-a870-05766cb7b66c', defaultEnabled:false, defaultBase:'210.210.210.101/24', defaultGateway:'' },
+];
+
+let state = {
+  timezone: 'America/New_York',
+  sections: { timezone:true, hostname:true, firewall:true, system:true, features:true, renderDelay:true, layouts:true, images:true },
+  ifaces: {}, // key -> { enabled, base }
+  bulk: {
+    prefix: 'REPLAY-',
+    start: 1,
+    count: 4,
+    servers: [],
+    previewIndex: 0
+  },
+  system: {},
+  remotes: ['200.200.200.101','200.200.200.103','200.200.200.104'],
+  features: Object.assign({}, FEATURE_DEFAULTS),
+  renderDelay: {},
+  layoutFiles: [], // { name, bytes: Uint8Array }
+  imageFiles: [] // { name, bytes: Uint8Array }
+};
+SYSTEM_FIELDS.forEach(f => state.system[f.key] = f.def);
+RENDER_DELAY_FIELDS.forEach(f => state.renderDelay[f.key] = f.def);
+IFACE_DEFS.forEach(f => state.ifaces[f.key] = { enabled: f.defaultEnabled, base: f.defaultBase, gateway: f.defaultGateway || '' });
+
+document.getElementById('timezoneSelect').addEventListener('change', e => {
+  state.timezone = e.target.value;
+  renderPreview();
+});
+
+/* ---------------------------------------------------------
+   Bulk deployment: cascading hostnames + interface IPs
+--------------------------------------------------------- */
+function incrementIp(cidr, delta){
+  const [ip, mask] = (cidr || '').split('/');
+  const parts = (ip || '0.0.0.0').split('.').map(n => parseInt(n, 10) || 0);
+  let last = parts[3] + delta;
+  parts[3] = ((last % 256) + 256) % 256;
+  return parts.join('.') + (mask ? '/' + mask : '');
+}
+
+function renderIfaceLists(){
+  const netplanEl = document.getElementById('netplanIfaceList');
+  const matroxEl = document.getElementById('matroxIfaceList');
+  netplanEl.innerHTML = '';
+  matroxEl.innerHTML = '';
+
+  IFACE_DEFS.forEach(def => {
+    const cfg = state.ifaces[def.key];
+    const row = document.createElement('div');
+    row.className = 'iface-row' + (cfg.enabled ? '' : ' disabled');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = cfg.enabled;
+    cb.addEventListener('change', () => {
+      cfg.enabled = cb.checked;
+      row.classList.toggle('disabled', !cfg.enabled);
+      renderServerTableHeader();
+      renderServerTable();
+      renderPreviewSelect(true);
+      renderPreview();
+    });
+
+    const labelWrap = document.createElement('div');
+    const label = document.createElement('span');
+    label.className = 'iface-label';
+    label.textContent = def.label;
+    labelWrap.appendChild(label);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = cfg.base;
+    input.placeholder = 'base address (cascades)';
+    input.addEventListener('input', () => {
+      cfg.base = input.value;
+    });
+
+    const gwInput = document.createElement('input');
+    gwInput.type = 'text';
+    gwInput.value = cfg.gateway || '';
+    gwInput.placeholder = 'gateway (optional, same for all)';
+    gwInput.addEventListener('input', () => {
+      cfg.gateway = gwInput.value;
+    });
+
+    row.appendChild(cb);
+    row.appendChild(labelWrap);
+    row.appendChild(input);
+    row.appendChild(gwInput);
+
+    (def.group === 'netplan' ? netplanEl : matroxEl).appendChild(row);
+  });
+}
+
+function enabledIfaces(){
+  return IFACE_DEFS.filter(def => state.ifaces[def.key].enabled);
+}
+
+function syncRemotesToServerCount(){
+  const count = state.bulk.servers.length;
+  const remotes = [];
+  for (let i = 0; i < count; i++){
+    remotes.push(incrementIp('200.200.200.101/24', i).split('/')[0]);
+  }
+  state.remotes = remotes;
+  renderIpList();
+}
+
+function regenerateCascade(){
+  const prefix = document.getElementById('bulkPrefix').value;
+  const start = parseInt(document.getElementById('bulkStart').value, 10) || 1;
+  const count = Math.max(1, parseInt(document.getElementById('bulkCount').value, 10) || 1);
+
+  state.bulk.prefix = prefix;
+  state.bulk.start = start;
+  state.bulk.count = count;
+
+  const prev = state.bulk.servers;
+  const servers = [];
+  for (let i = 0; i < count; i++){
+    const ips = {};
+    IFACE_DEFS.forEach(def => { ips[def.key] = incrementIp(state.ifaces[def.key].base, i); });
+    // per-server overrides are config, not addressing - carry them over by position
+    const overrides = (prev[i] && prev[i].overrides) ? prev[i].overrides : { system:{}, features:{} };
+    servers.push({ hostname: `${prefix}${start + i}`, ips, overrides });
+  }
+  state.bulk.servers = servers;
+  state.bulk.previewIndex = 0;
+  syncRemotesToServerCount();
+  renderServerTableHeader();
+  renderServerTable();
+  renderPreviewSelect();
+  renderPerServer();
+  renderPreview();
+}
+
+function renderServerTableHeader(){
+  const head = document.getElementById('serverTableHead');
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<th></th><th>hostname</th>' +
+    enabledIfaces().map(def => `<th>${def.label}</th>`).join('') +
+    '<th></th>';
+  head.innerHTML = '';
+  head.appendChild(tr);
+}
+
+function renderServerTable(){
+  const body = document.getElementById('serverTableBody');
+  body.innerHTML = '';
+  const active = enabledIfaces();
+
+  state.bulk.servers.forEach((srv, idx) => {
+    const tr = document.createElement('tr');
+
+    const idxTd = document.createElement('td');
+    idxTd.className = 'idx';
+    idxTd.textContent = idx + 1;
+    tr.appendChild(idxTd);
+
+    const hostTd = document.createElement('td');
+    const hostInput = document.createElement('input');
+    hostInput.type = 'text';
+    hostInput.value = srv.hostname;
+    hostInput.addEventListener('input', () => {
+      srv.hostname = hostInput.value;
+      renderPreviewSelect(true);
+      renderPerServer();
+      renderPreview();
+    });
+    hostTd.appendChild(hostInput);
+    tr.appendChild(hostTd);
+
+    active.forEach(def => {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = srv.ips[def.key];
+      input.addEventListener('input', () => {
+        srv.ips[def.key] = input.value;
+        renderPreviewSelect(true);
+        renderPreview();
+      });
+      td.appendChild(input);
+      tr.appendChild(td);
+    });
+
+    const rmTd = document.createElement('td');
+    rmTd.className = 'rm-col';
+    const rm = document.createElement('button');
+    rm.className = 'btn-mini';
+    rm.textContent = '✕';
+    rm.addEventListener('click', () => {
+      state.bulk.servers.splice(idx, 1);
+      if (state.bulk.previewIndex >= state.bulk.servers.length) state.bulk.previewIndex = 0;
+      syncRemotesToServerCount();
+      renderServerTable();
+      renderPreviewSelect();
+      renderPerServer();
+      renderPreview();
+    });
+    rmTd.appendChild(rm);
+    tr.appendChild(rmTd);
+
+    body.appendChild(tr);
+  });
+}
+
+function renderPreviewSelect(keepIndex){
+  const sel = document.getElementById('previewSelect');
+  const current = keepIndex ? sel.value : null;
+  sel.innerHTML = '';
+  const active = enabledIfaces();
+  state.bulk.servers.forEach((srv, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    const ipSummary = active.map(def => `${def.label} ${srv.ips[def.key]}`).join(' · ');
+    opt.textContent = ipSummary ? `${srv.hostname}  (${ipSummary})` : srv.hostname;
+    sel.appendChild(opt);
+  });
+  if (current !== null && sel.querySelector(`option[value="${current}"]`)) {
+    sel.value = current;
+  }
+  state.bulk.previewIndex = parseInt(sel.value || '0', 10);
+}
+
+document.getElementById('regenBtn').addEventListener('click', regenerateCascade);
+document.getElementById('addServerBtn').addEventListener('click', () => {
+  const last = state.bulk.servers[state.bulk.servers.length - 1];
+  const nextHostname = last
+    ? last.hostname.replace(/(\d+)$/, m => (parseInt(m,10) + 1))
+    : `${state.bulk.prefix}${state.bulk.start}`;
+  const ips = {};
+  IFACE_DEFS.forEach(def => {
+    ips[def.key] = last ? incrementIp(last.ips[def.key], 1) : state.ifaces[def.key].base;
+  });
+  state.bulk.servers.push({ hostname: nextHostname, ips, overrides: { system:{}, features:{} } });
+  syncRemotesToServerCount();
+  renderServerTable();
+  renderPreviewSelect(true);
+  renderPerServer();
+  renderPreview();
+});
+document.getElementById('previewSelect').addEventListener('change', e => {
+  state.bulk.previewIndex = parseInt(e.target.value, 10) || 0;
+  renderPerServer();
+  renderPreview();
+});
+
+/* ---------------------------------------------------------
+   Per-server overrides: the global [System] / features values are the
+   baseline; a server can pin its own value for any key. Pinned values
+   survive later baseline changes until reset (the ↺ button).
+--------------------------------------------------------- */
+const systemFieldCtl = {};   // global [System] controls by key (filled by renderSystemFields)
+const PS_IO_KEYS = ['ninputs', 'nsdioutputs', 'nmontageoutputs'];
+// must be identical across the whole batch - editable in the global [System] card only
+const PS_GLOBAL_ONLY = ['color_space', 'transfer_characteristic', 'bit_rate', 'proxies_enabled',
+                        'video_codec', 'video_standard', 'num_audio_channels'];
+
+function getSrvOverrides(srv){
+  if (!srv.overrides) srv.overrides = { system:{}, features:{} };
+  return srv.overrides;
+}
+function has(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
+// SMPTE 2110 timing is PTP - ltc / ltc_anc are only valid when input AND output are SDI
+const TS_PTP = 'ptppts';
+function tsLocked(srv){
+  const inFmt  = srv ? sysVal(srv, 'input_format')  : state.system.input_format;
+  const outFmt = srv ? sysVal(srv, 'output_format') : state.system.output_format;
+  return inFmt === 'smpte2110' || outFmt === 'smpte2110';
+}
+function isSysPinned(srv, key){
+  if (PS_GLOBAL_ONLY.includes(key)) return false;
+  if (key === 'time_source' && tsLocked(srv)) return false;
+  return has(getSrvOverrides(srv).system, key);
+}
+function isFeatPinned(srv, key){ return has(getSrvOverrides(srv).features, key); }
+function sysVal(srv, key){
+  if (key === 'time_source' && tsLocked(srv)) return TS_PTP;
+  return isSysPinned(srv, key) ? srv.overrides.system[key] : state.system[key];
+}
+function featVal(srv, key){ return isFeatPinned(srv, key) ? srv.overrides.features[key] : state.features[key]; }
+
+function psEl(tag, cls, text){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function psCurrent(){ return state.bulk.servers[state.bulk.previewIndex]; }
+function psCount(srv){
+  const o = getSrvOverrides(srv);
+  return Object.keys(o.system).filter(k => isSysPinned(srv, k)).length + Object.keys(o.features).length;
+}
+function psSummary(srv){
+  const o = getSrvOverrides(srv);
+  const parts = [];
+  SYSTEM_FIELDS.forEach(f => {
+    if (!PS_IO_KEYS.includes(f.key) && isSysPinned(srv, f.key)) parts.push(`${f.key}=${o.system[f.key]}`);
+  });
+  Object.keys(FEATURE_DEFAULTS).forEach(k => {
+    if (has(o.features, k)) parts.push(`${k.replace(/^FEATURE_/, '')}=${o.features[k] ? 'True' : 'False'}`);
+  });
+  return parts.length ? parts.join(' · ') : '—';
+}
+function psAfterChange(){ updateJpegxsNotice(); renderPreview(); }
+
+/* ----- overview table: inputs/outputs by server ----- */
+function renderPsOverview(){
+  const head = document.getElementById('psOverviewHead');
+  const body = document.getElementById('psOverviewBody');
+  head.innerHTML = '';
+  body.innerHTML = '';
+  const htr = document.createElement('tr');
+  htr.innerHTML = '<th></th><th>hostname</th>' +
+    PS_IO_KEYS.map(k => `<th>${k}<span class="gl">baseline ${state.system[k]}</span></th>`).join('') +
+    '<th>other overrides</th><th></th>';
+  head.appendChild(htr);
+
+  state.bulk.servers.forEach((srv, idx) => {
+    const tr = document.createElement('tr');
+    if (idx === state.bulk.previewIndex) tr.className = 'ps-sel';
+    tr.appendChild(psEl('td', 'idx', String(idx + 1)));
+    tr.appendChild(psEl('td', null, srv.hostname));
+
+    const sumTd = psEl('td', 'ps-sum', psSummary(srv));
+    PS_IO_KEYS.forEach(key => {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'num' + (isSysPinned(srv, key) ? ' ovr' : '');
+      input.value = sysVal(srv, key);
+      input.addEventListener('input', () => {
+        if (input.value === '') return;               // mid-edit; keep the previous value
+        getSrvOverrides(srv).system[key] = input.value;
+        input.classList.add('ovr');
+        sumTd.textContent = psSummary(srv);
+        if (idx === state.bulk.previewIndex) renderPsDetail();
+        psAfterChange();
+      });
+      td.appendChild(input);
+      tr.appendChild(td);
+    });
+    tr.appendChild(sumTd);
+
+    const actTd = document.createElement('td');
+    const edit = psEl('button', 'btn-mini', 'edit ›');
+    edit.style.padding = '5px 10px';
+    edit.addEventListener('click', () => {
+      psSelect(idx);
+      document.getElementById('psServerSelect').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    });
+    actTd.appendChild(edit);
+    tr.appendChild(actTd);
+    body.appendChild(tr);
+  });
+}
+
+function psSelect(idx){
+  state.bulk.previewIndex = idx;
+  document.getElementById('previewSelect').value = String(idx);
+  renderPerServer();
+  renderPreview();
+}
+
+function renderPsSelect(){
+  const sel = document.getElementById('psServerSelect');
+  sel.innerHTML = '';
+  state.bulk.servers.forEach((srv, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    const n = psCount(srv);
+    opt.textContent = n ? `${srv.hostname}  (${n} override${n === 1 ? '' : 's'})` : srv.hostname;
+    sel.appendChild(opt);
+  });
+  sel.value = String(state.bulk.previewIndex);
+}
+
+/* ----- detail: every [System] field + feature for the selected server ----- */
+function renderPsDetail(){
+  const box = document.getElementById('psDetail');
+  box.innerHTML = '';
+  const srv = psCurrent();
+  if (!srv){ box.appendChild(psEl('p', 'ps-hint', 'no servers yet')); return; }
+  const o = getSrvOverrides(srv);
+
+  const head = psEl('div', 'ps-head');
+  head.appendChild(psEl('div', 'ps-title', srv.hostname));
+  const resetAll = psEl('button', 'btn-mini', '↺ reset this server to baseline');
+  resetAll.style.padding = '5px 10px';
+  resetAll.addEventListener('click', () => {
+    srv.overrides = { system:{}, features:{} };
+    renderPerServer();
+    psAfterChange();
+  });
+  head.appendChild(resetAll);
+  box.appendChild(head);
+
+  // [System]
+  const sysSub = psEl('div', 'ps-sub', '[System]');
+  if (!state.sections.system) sysSub.appendChild(psEl('span', 'off', '— section is off, not applied'));
+  box.appendChild(sysSub);
+  const grid = psEl('div', 'grid2');
+  let tsDecor = null;   // re-evaluates the time_source control when this server's formats change
+  SYSTEM_FIELDS.forEach(f => {
+    const wrap = psEl('div', 'field');
+    const label = document.createElement('label');
+    const keySpan = psEl('span', 'key', f.key);
+    const note = psEl('span', 'ps-note');
+    const reset = psEl('button', 'ps-reset', '↺');
+    reset.title = 'back to baseline';
+    label.appendChild(keySpan); label.appendChild(note); label.appendChild(reset);
+    wrap.appendChild(label);
+
+    let input;
+    if (f.type === 'select' || f.type === 'bool') {
+      input = document.createElement('select');
+      (f.type === 'bool' ? ['true','false'] : f.opts).forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        input.appendChild(opt);
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = 'number';
+    }
+    input.value = sysVal(srv, f.key);
+    wrap.appendChild(input);
+
+    if (PS_GLOBAL_ONLY.includes(f.key)) {
+      input.disabled = true;
+      note.textContent = 'global only';
+      note.style.color = 'var(--text-faint)';
+      reset.style.display = 'none';
+      wrap.style.opacity = '0.6';
+      grid.appendChild(wrap);
+      return;
+    }
+
+    const isTs = f.key === 'time_source';
+    const isFmt = f.key === 'input_format' || f.key === 'output_format';
+    function decor(){
+      const pinned = isSysPinned(srv, f.key);
+      wrap.classList.toggle('ovr', pinned);
+      if (isTs && tsLocked(srv)) {
+        note.textContent = 'locked: SMPTE 2110 needs ptp';
+        note.style.color = 'var(--text-faint)';
+        reset.style.display = 'none';
+        input.value = TS_PTP;
+        input.disabled = true;
+        [...input.options].forEach(opt => { opt.disabled = opt.value !== TS_PTP; });
+        return;
+      }
+      if (isTs) {
+        input.disabled = false;
+        [...input.options].forEach(opt => { opt.disabled = false; });
+        input.value = sysVal(srv, f.key);
+        note.style.color = '';
+      }
+      note.textContent = pinned ? `baseline: ${state.system[f.key]}` : '';
+      reset.style.display = pinned ? '' : 'none';
+    }
+    if (isTs) tsDecor = decor;
+    input.addEventListener('input', () => {
+      if (input.value === '') return;
+      o.system[f.key] = input.value;
+      decor();
+      if (isFmt && tsDecor) tsDecor();
+      renderPsOverview(); renderPsSelect();
+      psAfterChange();
+    });
+    reset.addEventListener('click', () => {
+      delete o.system[f.key];
+      input.value = state.system[f.key];
+      decor();
+      if (isFmt && tsDecor) tsDecor();
+      renderPsOverview(); renderPsSelect();
+      psAfterChange();
+    });
+    decor();
+    grid.appendChild(wrap);
+  });
+  box.appendChild(grid);
+
+  // features.conf
+  const featSub = psEl('div', 'ps-sub', 'features.conf');
+  if (!state.sections.features) featSub.appendChild(psEl('span', 'off', '— section is off, not applied'));
+  box.appendChild(featSub);
+  Object.keys(FEATURE_DEFAULTS).forEach(key => {
+    const row = psEl('div', 'toggle-row');
+    const left = psEl('div');
+    const label = psEl('span', 'toggle-label', key);
+    attachTip(label, key);
+    const note = psEl('span', 'ps-note');
+    const reset = psEl('button', 'ps-reset', '↺');
+    reset.title = 'back to baseline';
+    left.appendChild(label); left.appendChild(note); left.appendChild(reset);
+
+    const sw = psEl('label', 'switch');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!featVal(srv, key);
+    const track = psEl('span', 'track');
+    track.appendChild(psEl('span', 'knob'));
+    sw.appendChild(cb); sw.appendChild(track);
+    row.appendChild(left); row.appendChild(sw);
+
+    function decor(){
+      const pinned = isFeatPinned(srv, key);
+      row.classList.toggle('ovr', pinned);
+      note.textContent = pinned ? `baseline: ${state.features[key] ? 'True' : 'False'}` : '';
+      reset.style.display = pinned ? '' : 'none';
+    }
+    cb.addEventListener('change', () => {
+      o.features[key] = cb.checked;
+      decor();
+      renderPsOverview(); renderPsSelect();
+      psAfterChange();
+    });
+    reset.addEventListener('click', () => {
+      delete o.features[key];
+      cb.checked = !!state.features[key];
+      decor();
+      renderPsOverview(); renderPsSelect();
+      psAfterChange();
+    });
+    decor();
+    box.appendChild(row);
+  });
+}
+
+function renderPerServer(){
+  const n = state.bulk.servers.length;
+  if (state.bulk.previewIndex >= n) state.bulk.previewIndex = 0;
+  renderPsOverview();
+  renderPsSelect();
+  renderPsDetail();
+}
+
+document.getElementById('psServerSelect').addEventListener('change', e => {
+  psSelect(parseInt(e.target.value, 10) || 0);
+});
+document.getElementById('psClearAllBtn').addEventListener('click', () => {
+  const total = state.bulk.servers.reduce((n, srv) => n + psCount(srv), 0);
+  if (total === 0) return;
+  if (!confirm(`Clear ${total} per-server override${total === 1 ? '' : 's'} across all servers?`)) return;
+  state.bulk.servers.forEach(srv => { srv.overrides = { system:{}, features:{} }; });
+  renderPerServer();
+  renderPreview();
+});
+
+
+/* ---------------------------------------------------------
+   Hover tooltips (floating, so the cards' overflow:hidden can't clip them)
+--------------------------------------------------------- */
+const tipBox = document.getElementById('tipBox');
+let tipTarget = null;
+function attachTip(el, key){
+  if (!FEATURE_INFO[key]) return;
+  el.dataset.tip = FEATURE_INFO[key];
+  el.dataset.tipKey = key;
+  el.classList.add('has-tip');
+}
+function hideTip(){ tipTarget = null; tipBox.style.display = 'none'; }
+function showTip(t){
+  tipTarget = t;
+  tipBox.innerHTML = '';
+  const k = document.createElement('span');
+  k.className = 'tip-key';
+  k.textContent = t.dataset.tipKey || '';
+  tipBox.appendChild(k);
+  tipBox.appendChild(document.createTextNode(t.dataset.tip));
+  tipBox.style.display = 'block';
+  const r = t.getBoundingClientRect();
+  const bw = tipBox.offsetWidth, bh = tipBox.offsetHeight;
+  const left = Math.max(8, Math.min(r.left, window.innerWidth - bw - 8));
+  let top = r.bottom + 8;
+  if (top + bh > window.innerHeight - 8) top = Math.max(8, r.top - bh - 8);
+  tipBox.style.left = left + 'px';
+  tipBox.style.top = top + 'px';
+}
+document.addEventListener('mousemove', e => {
+  const t = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+  if (t === tipTarget) return;
+  if (!t) { hideTip(); return; }
+  showTip(t);
+});
+document.addEventListener('scroll', hideTip, true);
+
+renderIfaceLists();
+regenerateCascade();
+
+/* ---------------------------------------------------------
+   Render: System fields
+--------------------------------------------------------- */
+const systemFieldsEl = document.getElementById('systemFields');
+function syncGlobalTimeSource(){
+  const locked = tsLocked(null);
+  if (locked) state.system.time_source = TS_PTP;
+  const c = systemFieldCtl.time_source;
+  if (!c) return;
+  c.input.value = state.system.time_source;
+  c.input.disabled = locked;
+  [...c.input.options].forEach(opt => { opt.disabled = locked && opt.value !== TS_PTP; });
+  c.note.textContent = locked ? 'locked: SMPTE 2110 needs ptp' : '';
+}
+
+function renderSystemFields(){
+  systemFieldsEl.innerHTML = '';
+  Object.keys(systemFieldCtl).forEach(k => delete systemFieldCtl[k]);
+  SYSTEM_FIELDS.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    const label = document.createElement('label');
+    label.innerHTML = `<span class="key">${f.key}</span>`;
+    const note = document.createElement('span');
+    note.className = 'ps-note';
+    label.appendChild(note);
+    wrap.appendChild(label);
+
+    let input;
+    if (f.type === 'select' || f.type === 'bool') {
+      input = document.createElement('select');
+      (f.type === 'bool' ? ['true','false'] : f.opts).forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o; opt.textContent = o;
+        input.appendChild(opt);
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = 'number';
+    }
+    input.value = state.system[f.key];
+    input.addEventListener('input', () => {
+      state.system[f.key] = input.value;
+      if (f.key === 'video_codec') updateJpegxsNotice();
+      if (f.key === 'input_format' || f.key === 'output_format' || f.key === 'time_source') syncGlobalTimeSource();
+      renderPerServer();
+      renderPreview();
+    });
+    wrap.appendChild(input);
+    systemFieldsEl.appendChild(wrap);
+    systemFieldCtl[f.key] = { input, wrap, note };
+  });
+  syncGlobalTimeSource();
+}
+renderSystemFields();
+
+const renderDelayFieldsEl = document.getElementById('renderDelayFields');
+function renderRenderDelayFields(){
+  renderDelayFieldsEl.innerHTML = '';
+  RENDER_DELAY_FIELDS.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    const label = document.createElement('label');
+    label.innerHTML = `<span class="key">${f.key}</span>`;
+    wrap.appendChild(label);
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.value = state.renderDelay[f.key];
+    input.addEventListener('input', () => {
+      state.renderDelay[f.key] = input.value === '' ? 0 : Number(input.value);
+      renderPreview();
+    });
+    wrap.appendChild(input);
+    renderDelayFieldsEl.appendChild(wrap);
+  });
+}
+renderRenderDelayFields();
+
+function updateJpegxsNotice(){
+  const anyJpegxs = state.system.video_codec === 'jpegxs' ||
+    state.bulk.servers.some(srv => sysVal(srv, 'video_codec') === 'jpegxs');
+  document.getElementById('jpegxsNotice').style.display = anyJpegxs ? 'flex' : 'none';
+}
+updateJpegxsNotice();
+
+/* ---------------------------------------------------------
+   Render: remotes (IP list)
+--------------------------------------------------------- */
+function renderIpList(){
+  const ipListEl = document.getElementById('ipList');
+  ipListEl.innerHTML = '';
+  state.remotes.forEach((ip, idx) => {
+    const row = document.createElement('div');
+    row.className = 'ip-row';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = ip;
+    input.placeholder = '200.200.200.10x';
+    input.addEventListener('input', () => { state.remotes[idx] = input.value; renderPreview(); });
+    const rm = document.createElement('button');
+    rm.className = 'btn-mini';
+    rm.textContent = '✕';
+    rm.addEventListener('click', () => { state.remotes.splice(idx,1); renderIpList(); renderPreview(); });
+    row.appendChild(input);
+    row.appendChild(rm);
+    ipListEl.appendChild(row);
+  });
+}
+document.getElementById('addIpBtn').addEventListener('click', () => {
+  state.remotes.push('');
+  renderIpList();
+  renderPreview();
+});
+renderIpList();
+
+/* ---------------------------------------------------------
+   Render: feature toggles
+--------------------------------------------------------- */
+const featureToggles = document.getElementById('featureToggles');
+function renderFeatureToggles(){
+  featureToggles.innerHTML = '';
+  Object.keys(FEATURE_DEFAULTS).forEach(key => {
+    const row = document.createElement('div');
+    row.className = 'toggle-row';
+    const label = document.createElement('div');
+    label.className = 'toggle-label';
+    label.textContent = key;
+    attachTip(label, key);
+    const sw = document.createElement('label');
+    sw.className = 'switch';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!state.features[key];
+    cb.addEventListener('change', () => { state.features[key] = cb.checked; renderPerServer(); renderPreview(); });
+    const track = document.createElement('span');
+    track.className = 'track';
+    const knob = document.createElement('span');
+    knob.className = 'knob';
+    track.appendChild(knob);
+    sw.appendChild(cb);
+    sw.appendChild(track);
+    row.appendChild(label);
+    row.appendChild(sw);
+    featureToggles.appendChild(row);
+  });
+}
+renderFeatureToggles();
+
+/* ---------------------------------------------------------
+   File uploads (Vue layouts)
+--------------------------------------------------------- */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileChips = document.getElementById('fileChips');
+
+dropzone.addEventListener('click', () => fileInput.click());
+['dragenter','dragover'].forEach(evt => dropzone.addEventListener(evt, e => {
+  e.preventDefault(); dropzone.classList.add('drag');
+}));
+['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+}));
+dropzone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+function handleFiles(fileList){
+  Array.from(fileList).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      state.layoutFiles.push({ name: file.name, bytes: new Uint8Array(reader.result) });
+      renderFileChips();
+      renderPreview();
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function renderFileChips(){
+  fileChips.innerHTML = '';
+  state.layoutFiles.forEach((f, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.innerHTML = `<span class="path">/etc/vue/layouts/<b>${f.name}</b></span>`;
+    const rm = document.createElement('button');
+    rm.className = 'btn-mini';
+    rm.textContent = '✕';
+    rm.addEventListener('click', () => { state.layoutFiles.splice(idx,1); renderFileChips(); renderPreview(); });
+    chip.appendChild(rm);
+    fileChips.appendChild(chip);
+  });
+}
+
+/* ---------------------------------------------------------
+   File uploads (Vue images)
+--------------------------------------------------------- */
+const imageDropzone = document.getElementById('imageDropzone');
+const imageFileInput = document.getElementById('imageFileInput');
+const imageFileChips = document.getElementById('imageFileChips');
+
+imageDropzone.addEventListener('click', () => imageFileInput.click());
+['dragenter','dragover'].forEach(evt => imageDropzone.addEventListener(evt, e => {
+  e.preventDefault(); imageDropzone.classList.add('drag');
+}));
+['dragleave','drop'].forEach(evt => imageDropzone.addEventListener(evt, e => {
+  e.preventDefault(); imageDropzone.classList.remove('drag');
+}));
+imageDropzone.addEventListener('drop', e => handleImageFiles(e.dataTransfer.files));
+imageFileInput.addEventListener('change', e => handleImageFiles(e.target.files));
+
+function handleImageFiles(fileList){
+  Array.from(fileList).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      state.imageFiles.push({ name: file.name, bytes: new Uint8Array(reader.result) });
+      renderImageFileChips();
+      renderPreview();
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function renderImageFileChips(){
+  imageFileChips.innerHTML = '';
+  state.imageFiles.forEach((f, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.innerHTML = `<span class="path">/etc/vue/images/<b>${f.name}</b></span>`;
+    const rm = document.createElement('button');
+    rm.className = 'btn-mini';
+    rm.textContent = '✕';
+    rm.addEventListener('click', () => { state.imageFiles.splice(idx,1); renderImageFileChips(); renderPreview(); });
+    chip.appendChild(rm);
+    imageFileChips.appendChild(chip);
+  });
+}
+
+/* ---------------------------------------------------------
+   Per-section include/exclude toggles
+--------------------------------------------------------- */
+function wireSectionToggle(toggleId, cardId, sectionKey){
+  const cb = document.getElementById(toggleId);
+  const card = document.getElementById(cardId);
+  const target = card.querySelector('.card-body') || card;
+  function apply(){
+    state.sections[sectionKey] = cb.checked;
+    target.classList.toggle('section-disabled', !cb.checked);
+    renderPerServer();
+    renderPreview();
+  }
+  cb.addEventListener('change', apply);
+  apply();
+}
+
+wireSectionToggle('toggleTimezone', 'timezoneCard', 'timezone');
+wireSectionToggle('toggleSystem', 'systemCard', 'system');
+wireSectionToggle('toggleFeatures', 'featuresCard', 'features');
+document.getElementById('toggleFirewall').addEventListener('change', e => {
+  state.sections.firewall = e.target.checked;
+  renderPreview();
+});
+wireSectionToggle('toggleRenderDelay', 'renderDelayCard', 'renderDelay');
+wireSectionToggle('toggleLayouts', 'layoutsCard', 'layouts');
+wireSectionToggle('toggleImages', 'imagesCard', 'images');
+
+document.getElementById('toggleHostname').addEventListener('change', e => {
+  state.sections.hostname = e.target.checked;
+  renderPreview();
+});
+
+/* ---------------------------------------------------------
+   Script generation
+--------------------------------------------------------- */
+function buildInstallScript(server){
+  server = server || { hostname: 'unnamed-server', ips: {} };
+  const netplanIfaces = IFACE_DEFS.filter(def => def.group === 'netplan' && state.ifaces[def.key].enabled);
+  const matroxIfaces = IFACE_DEFS.filter(def => def.group === 'matrox' && state.ifaces[def.key].enabled);
+  const sec = state.sections;
+
+  const lines = [];
+  lines.push('#!/bin/bash');
+  lines.push('set -e');
+  lines.push('');
+  lines.push(`# Generated by DreamCatcher Base Config Builder — ${new Date().toISOString()}`);
+  lines.push(`# Target: ${server.hostname}`);
+  lines.push('');
+  lines.push('INI_FILE=/etc/dreamcatcher.ini');
+  lines.push('FEATURES_FILE=/etc/features.conf');
+  lines.push('LAYOUTS_DIR=/etc/vue/layouts/');
+  lines.push('IMAGES_DIR=/etc/vue/images/');
+  lines.push('');
+
+  if (sec.timezone) {
+    lines.push(`echo "Setting timezone to ${state.timezone}..."`);
+    lines.push(`echo "${state.timezone}" > /etc/timezone`);
+    lines.push(`ln -sf /usr/share/zoneinfo/${state.timezone} /etc/localtime`);
+    lines.push('');
+  }
+
+  if (sec.hostname) {
+    lines.push(`echo "Setting hostname to ${server.hostname}..."`);
+    lines.push(`echo "${server.hostname}" > /etc/hostname`);
+    lines.push(`hostnamectl set-hostname "${server.hostname}" 2>/dev/null || hostname "${server.hostname}"`);
+    lines.push('');
+  }
+
+  if (sec.firewall) {
+    lines.push('echo "Disabling Linux firewall..."');
+    lines.push('if command -v ufw >/dev/null 2>&1; then');
+    lines.push('  ufw --force disable || true');
+    lines.push('fi');
+    lines.push('systemctl stop ufw 2>/dev/null || true');
+    lines.push('systemctl disable ufw 2>/dev/null || true');
+    lines.push('if systemctl list-unit-files 2>/dev/null | grep -q "^firewalld"; then');
+    lines.push('  systemctl stop firewalld 2>/dev/null || true');
+    lines.push('  systemctl disable firewalld 2>/dev/null || true');
+    lines.push('fi');
+    lines.push('echo "Firewall status:"');
+    lines.push('ufw status 2>/dev/null || echo "  ufw not installed"');
+    lines.push('');
+  }
+
+  if (netplanIfaces.length > 0) {
+    lines.push('NETPLAN_FILE=/etc/netplan/01-netcfg.yaml');
+    lines.push('mkdir -p /etc/netplan');
+    lines.push('touch "${NETPLAN_FILE}"');
+    lines.push('cp "${NETPLAN_FILE}" "${NETPLAN_FILE}.bak.$(date +%s)" 2>/dev/null || true');
+    lines.push('');
+    lines.push('set_netplan_addr() {');
+    lines.push('  local file="$1" iface="$2" newaddr="$3" gw="$4"');
+    lines.push('  awk -v iface="${iface}" -v newaddr="${newaddr}" -v gw="${gw}" \'');
+    lines.push('    { sub(/\\r$/, "") }');
+    lines.push('    function flush_missing() {');
+    lines.push('      if (in_iface) {');
+    lines.push('        if (!saw_dhcp4) print "      dhcp4: false"');
+    lines.push('        if (!saw_addr) { print "      addresses:"; print "        - " newaddr }');
+    lines.push('        if (gw != "" && !saw_routes) { print "      routes:"; print "        - to: 0.0.0.0/0"; print "          via: " gw }');
+    lines.push('      }');
+    lines.push('    }');
+    lines.push('    /^[A-Za-z]/ || /^  [A-Za-z]/ {');
+    lines.push('      flush_missing()');
+    lines.push('      in_iface = 0');
+    lines.push('      print');
+    lines.push('      next');
+    lines.push('    }');
+    lines.push('    /^    [A-Za-z0-9_.-]+:/ {');
+    lines.push('      flush_missing()');
+    lines.push('      line = $0');
+    lines.push('      sub(/^    /, "", line); sub(/:.*/, "", line)');
+    lines.push('      in_iface = (line == iface)');
+    lines.push('      saw_addr = 0');
+    lines.push('      saw_dhcp4 = 0');
+    lines.push('      saw_routes = 0');
+    lines.push('      in_addr = 0');
+    lines.push('      in_routes = 0');
+    lines.push('      print');
+    lines.push('      next');
+    lines.push('    }');
+    lines.push('    in_iface && /^      dhcp4:/ { saw_dhcp4 = 1; print "      dhcp4: false"; next }');
+    lines.push('    in_iface && /^      addresses:/ { saw_addr = 1; in_addr = 1; print; next }');
+    lines.push('    in_iface && in_addr && /^        - / { print "        - " newaddr; in_addr = 0; next }');
+    lines.push('    in_iface && /^      routes:/ { saw_routes = 1; in_routes = 1; print; next }');
+    lines.push('    in_iface && in_routes && /^        - to:/ { print; next }');
+    lines.push('    in_iface && in_routes && /^          via:/ {');
+    lines.push('      if (gw != "") { print "          via: " gw } else { print }');
+    lines.push('      in_routes = 0');
+    lines.push('      next');
+    lines.push('    }');
+    lines.push('    { print }');
+    lines.push('    END { flush_missing() }');
+    lines.push("  ' \"${file}\" > \"${file}.tmp\" && cat \"${file}.tmp\" > \"${file}\" && rm -f \"${file}.tmp\"");
+    lines.push('}');
+    lines.push('');
+    lines.push('ensure_netplan_iface() {');
+    lines.push('  local file="$1" iface="$2" addr="$3" gw="$4"');
+    lines.push('  if grep -q "^    ${iface}:" "${file}" 2>/dev/null; then return 0; fi');
+    lines.push('  awk -v iface="${iface}" -v addr="${addr}" -v gw="${gw}" \'');
+    lines.push('    { sub(/\\r$/, "") }');
+    lines.push('    BEGIN { seen_ethernets = 0; inserted = 0 }');
+    lines.push('    /^  ethernets:$/ { seen_ethernets = 1; print; next }');
+    lines.push('    seen_ethernets && !inserted && $0 !~ /^    / && $0 ~ /^  [A-Za-z]/ {');
+    lines.push('      print "    " iface ":"');
+    lines.push('      print "      dhcp4: false"');
+    lines.push('      print "      addresses:"');
+    lines.push('      print "        - " addr');
+    lines.push('      if (gw != "") { print "      routes:"; print "        - to: 0.0.0.0/0"; print "          via: " gw }');
+    lines.push('      inserted = 1');
+    lines.push('      print');
+    lines.push('      next');
+    lines.push('    }');
+    lines.push('    { print }');
+    lines.push('    END {');
+    lines.push('      if (!inserted) {');
+    lines.push('        if (!seen_ethernets) { print "network:"; print "  ethernets:" }');
+    lines.push('        print "    " iface ":"');
+    lines.push('        print "      dhcp4: false"');
+    lines.push('        print "      addresses:"');
+    lines.push('        print "        - " addr');
+    lines.push('        if (gw != "") { print "      routes:"; print "        - to: 0.0.0.0/0"; print "          via: " gw }');
+    lines.push('        if (!seen_ethernets) print "  version: 2"');
+    lines.push('      }');
+    lines.push('    }');
+    lines.push("  ' \"${file}\" > \"${file}.tmp\" && cat \"${file}.tmp\" > \"${file}\" && rm -f \"${file}.tmp\"");
+    lines.push('}');
+    lines.push('');
+    lines.push('# If an interface below is not yet present in the file, insert its stanza');
+    lines.push('# correctly nested inside ethernets: (even if renderer:/version: follow it) —');
+    lines.push('# set_netplan_addr then patches or adds the address for stanzas that already exist.');
+    netplanIfaces.forEach(def => {
+      lines.push(`ensure_netplan_iface "\${NETPLAN_FILE}" ${def.label} "${server.ips[def.key]}" "${state.ifaces[def.key].gateway || ''}"`);
+    });
+    lines.push('');
+    lines.push(`echo "Writing eth interface addresses in \${NETPLAN_FILE}..."`);
+    netplanIfaces.forEach(def => {
+      lines.push(`set_netplan_addr "\${NETPLAN_FILE}" ${def.label} "${server.ips[def.key]}" "${state.ifaces[def.key].gateway || ''}"`);
+    });
+    lines.push('# Interfaces not selected in this package are left completely untouched.');
+    lines.push('# Run "netplan apply" (or reboot) on the target to activate networking changes.');
+    lines.push('');
+  }
+
+  if (matroxIfaces.length > 0) {
+    lines.push('echo "Writing Matrox NetworkManager connection profiles..."');
+    lines.push('mkdir -p /etc/NetworkManager/system-connections');
+    matroxIfaces.forEach(def => {
+      const path = `/etc/NetworkManager/system-connections/${def.label}`;
+      lines.push(`cat > "${path}" << 'EOF'`);
+      lines.push('[connection]');
+      lines.push(`id = ${def.label}`);
+      lines.push(`uuid = ${def.uuid}`);
+      lines.push('type = 802-3-ethernet');
+      lines.push(`interface-name = ${def.label}`);
+      lines.push('');
+      lines.push('[ipv6]');
+      lines.push('method = disabled');
+      lines.push('');
+      lines.push('[ipv4]');
+      lines.push('method = manual');
+      lines.push(`address1 = ${server.ips[def.key]}`);
+      lines.push(`gateway = ${state.ifaces[def.key].gateway || '0.0.0.0'}`);
+      lines.push('EOF');
+      lines.push(`chmod 600 "${path}"`);
+    });
+    lines.push('# bound by interface-name (no mac-address) since MACs differ per physical box.');
+    lines.push('');
+  }
+
+  if (sec.system) {
+    lines.push('cp "${INI_FILE}" "${INI_FILE}.bak.$(date +%s)" 2>/dev/null || true');
+    lines.push('set_ini_value() {');
+    lines.push('  local file="$1" section="$2" key="$3" value="$4"');
+    lines.push('  awk -v section="[${section}]" -v key="${key}" -v value="${value}" \'');
+    lines.push('    { sub(/\\r$/, "") }');
+    lines.push('    function flush_missing() { if (insec_prev && !found) print key" = "value }');
+    lines.push('    /^\\[/{');
+    lines.push('      flush_missing()');
+    lines.push('      insec = ($0 == section)');
+    lines.push('      insec_prev = insec');
+    lines.push('      found = 0');
+    lines.push('      print');
+    lines.push('      next');
+    lines.push('    }');
+    lines.push('    {');
+    lines.push('      if (insec && $0 ~ "^"key"[ \\t]*=") { print key" = "value; found = 1; next }');
+    lines.push('      print');
+    lines.push('    }');
+    lines.push('    END { flush_missing() }');
+    lines.push("  ' \"${file}\" > \"${file}.tmp\" && cat \"${file}.tmp\" > \"${file}\" && rm -f \"${file}.tmp\"");
+    lines.push('}');
+    lines.push('');
+    lines.push('get_ini_value() {');
+    lines.push('  local file="$1" section="$2" key="$3"');
+    lines.push('  awk -v section="[${section}]" -v key="${key}" \'');
+    lines.push('    { sub(/\\r$/, "") }');
+    lines.push('    BEGIN { insec = 0 }');
+    lines.push('    /^\\[/{ insec = ($0 == section) }');
+    lines.push('    {');
+    lines.push('      if (insec == 1 && $0 ~ "^"key"[ \\t]*=") {');
+    lines.push('        sub(/^[^=]*=[ \\t]*/, "")');
+    lines.push('        print');
+    lines.push('      }');
+    lines.push("    }' \"${file}\"");
+    lines.push('}');
+    lines.push('');
+    lines.push('set_ini_value_global() {');
+    lines.push('  local file="$1" key="$2" value="$3"');
+    lines.push('  awk -v key="${key}" -v value="${value}" \'');
+    lines.push('    { sub(/\\r$/, "") }');
+    lines.push('    $0 ~ "^"key"[ \\t]*=" { print key" = "value; next }');
+    lines.push('    { print }');
+    lines.push("  ' \"${file}\" > \"${file}.tmp\" && cat \"${file}.tmp\" > \"${file}\" && rm -f \"${file}.tmp\"");
+    lines.push('}');
+    lines.push('');
+    lines.push('echo "Applying [System] settings to ${INI_FILE}..."');
+    SYSTEM_FIELDS.forEach(f => {
+      lines.push(`set_ini_value "\${INI_FILE}" System ${f.key} "${sysVal(server, f.key)}"`);
+    });
+    const remotesVal = state.remotes.filter(r => r.trim() !== '').join(',');
+    lines.push(`set_ini_value "\${INI_FILE}" System remotes "${remotesVal}"`);
+    lines.push('');
+    lines.push('echo "Cascading bit_rate to every Input/Output section..."');
+    lines.push(`set_ini_value_global "\${INI_FILE}" bit_rate "${sysVal(server, 'bit_rate')}"`);
+    lines.push('echo "bit_rate now set in these lines:"');
+    lines.push('grep -n "^bit_rate" "${INI_FILE}" || true');
+    lines.push('');
+    lines.push('echo "Cascading video_codec to every Input section..."');
+    lines.push(`set_ini_value_global "\${INI_FILE}" video_codec "${sysVal(server, 'video_codec')}"`);
+    lines.push('echo "video_codec now set in these lines:"');
+    lines.push('grep -n "^video_codec" "${INI_FILE}" || true');
+    lines.push('');
+    lines.push('echo "Cascading video_standard to logical_standard on every Input/Output section..."');
+    lines.push(`set_ini_value_global "\${INI_FILE}" logical_standard "${sysVal(server, 'video_standard')}"`);
+    lines.push('echo "logical_standard now set in these lines:"');
+    lines.push('grep -n "^logical_standard" "${INI_FILE}" || true');
+    lines.push('');
+    lines.push('echo "Verifying [System] settings..."');
+    const verifyPairs = SYSTEM_FIELDS.map(f => [f.key, sysVal(server, f.key)]).concat([['remotes', remotesVal]]);
+    verifyPairs.forEach(([key, val]) => {
+      lines.push(`actual=$(get_ini_value "\${INI_FILE}" System ${key}); if [ "$actual" = "${val}" ]; then echo "  ✓ ${key}"; else echo "  ✗ ${key} — expected '${val}', found '$actual' (key missing, wrong section, or unexpected formatting in ${'${INI_FILE}'})"; fi`);
+    });
+    lines.push('');
+
+    if (sysVal(server, 'video_codec') === 'jpegxs') {
+      lines.push('echo "Installing JPEG-XS license..."');
+      lines.push('LICENSE_DIR=/usr/share/licensing/intopix/');
+      lines.push('mkdir -p "${LICENSE_DIR}"');
+      lines.push('cat /etc/machine-id >> "${LICENSE_DIR}ipx-cpu-codec-decode.dat"');
+      lines.push('');
+    }
+  }
+
+  if (sec.features) {
+    lines.push('cp "${FEATURES_FILE}" "${FEATURES_FILE}.bak.$(date +%s)" 2>/dev/null || true');
+    lines.push('set_feature() {');
+    lines.push('  local key="$1" value="$2"');
+    lines.push('  if grep -q "^${key}[ \\t]*=" "${FEATURES_FILE}" 2>/dev/null; then');
+    lines.push('    awk -v key="${key}" -v value="${value}" \'');
+    lines.push('      { sub(/\\r$/, "") }');
+    lines.push('      $0 ~ "^"key"[ \\t]*=" { print key"="value; next }');
+    lines.push('      { print }');
+    lines.push("    ' \"${FEATURES_FILE}\" > \"${FEATURES_FILE}.tmp\" && cat \"${FEATURES_FILE}.tmp\" > \"${FEATURES_FILE}\" && rm -f \"${FEATURES_FILE}.tmp\"");
+    lines.push('  else');
+    lines.push('    echo "${key}=${value}" >> "${FEATURES_FILE}"');
+    lines.push('  fi');
+    lines.push('}');
+    lines.push('');
+    lines.push('get_feature() {');
+    lines.push('  local key="$1"');
+    lines.push('  awk -v key="${key}" \'');
+    lines.push('    { sub(/\\r$/, "") }');
+    lines.push('    $0 ~ "^"key"[ \\t]*=" { sub(/^[^=]*=[ \\t]*/, ""); print; exit }');
+    lines.push("  ' \"${FEATURES_FILE}\"");
+    lines.push('}');
+    lines.push('');
+    lines.push('echo "Applying feature flags to ${FEATURES_FILE}..."');
+    Object.keys(state.features).forEach(key => {
+      lines.push(`set_feature ${key} ${featVal(server, key) ? 'True' : 'False'}`);
+    });
+    lines.push('');
+    lines.push('echo "Verifying feature flags..."');
+    Object.keys(state.features).forEach(key => {
+      const val = featVal(server, key) ? 'True' : 'False';
+      lines.push(`actual=$(get_feature ${key}); if [ "$actual" = "${val}" ]; then echo "  ✓ ${key}"; else echo "  ✗ ${key} — expected '${val}', found '$actual' (key missing or unexpected formatting in ${'${FEATURES_FILE}'})"; fi`);
+    });
+    lines.push('');
+  }
+
+  if (sec.renderDelay) {
+    const renderDelayJson = JSON.stringify({
+      proxy: state.renderDelay.proxy,
+      hd: state.renderDelay.hd,
+      uhd: state.renderDelay.uhd,
+      '3g': state.renderDelay['3g']
+    });
+    lines.push('echo "Writing /etc/default/render_delay.json..."');
+    lines.push('mkdir -p /etc/default');
+    lines.push("cat > /etc/default/render_delay.json << 'EOF'");
+    lines.push(renderDelayJson);
+    lines.push('EOF');
+    lines.push('');
+  }
+
+  if (sec.layouts && state.layoutFiles.length > 0) {
+    lines.push('echo "Installing Vue layouts..."');
+    lines.push('mkdir -p "${LAYOUTS_DIR}"');
+    state.layoutFiles.forEach(f => {
+      lines.push(`cp "./${f.name}" "\${LAYOUTS_DIR}"`);
+    });
+    lines.push('');
+  }
+
+  if (sec.images && state.imageFiles.length > 0) {
+    lines.push('echo "Installing Vue images..."');
+    lines.push('mkdir -p "${IMAGES_DIR}"');
+    state.imageFiles.forEach(f => {
+      lines.push(`cp "./${f.name}" "\${IMAGES_DIR}"`);
+    });
+    lines.push('');
+  }
+
+  const finale = [
+    ``,
+    `   ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`,
+    `            .-~~~~-.`,
+    `          .'  . .   '.`,
+    `         (  .  (o)  .  )`,
+    `          '.   . .   .'`,
+    `            '-.....-'`,
+    `              ' | '`,
+    `              : | :`,
+    `              . | .`,
+    `   ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`,
+    ``,
+    `   ${server.hostname} is configured. The basics are DONE.`,
+    ``,
+    `   Your DreamCatcher is officially open for business.`,
+    `   May it catch every dream, every replay, and every last-second`,
+    `   buzzer beater. Zero dropped frames. Zero "wait, which input is`,
+    `   that?" Zero firewall drama.`,
+    ``,
+    `   Now go forth and record something legendary.`,
+    ``,
+  ].join('\n');
+  lines.push("cat << 'EOF'");
+  lines.push(finale);
+  lines.push('EOF');
+  return lines.join('\n') + '\n';
+}
+
+/* ---------------------------------------------------------
+   Preview rendering (diff-styled, read-only)
+--------------------------------------------------------- */
+function renderPreview(){
+  const server = state.bulk.servers[state.bulk.previewIndex] || state.bulk.servers[0];
+  const script = buildInstallScript(server);
+  const el = document.getElementById('preview');
+  el.innerHTML = '';
+  script.split('\n').forEach(line => {
+    const div = document.createElement('div');
+    if (line.startsWith('#')) div.className = 'l-cmt';
+    else if (line.startsWith('set_ini_value') || line.startsWith('set_feature') || line.startsWith('cp ') || line.startsWith('cat ') || line.startsWith('mkdir') || line.startsWith('chmod') || line.startsWith('{') || line.startsWith('ln -sf') || line.startsWith('echo "America') || line.startsWith('hostnamectl') || line.startsWith('network:') || line.startsWith('sudo ') || line.startsWith('systemctl') || line.startsWith('ufw') || line.startsWith('sleep ') || line.startsWith('  ') || line.startsWith('    ')) div.className = 'l-add';
+    else if (line.startsWith('[') ) div.className = 'l-sec';
+    div.textContent = line.length ? line : '\u00A0';
+    el.appendChild(div);
+  });
+}
+renderPreview();
+
+/* ---------------------------------------------------------
+   TAR (USTAR) builder
+--------------------------------------------------------- */
+/* ---------------------------------------------------------
+   MD5 (self-contained, no CDN dependency) — RFC 1321
+--------------------------------------------------------- */
+function md5Hex(bytes){
+  function rotl(x, c){ return (x << c) | (x >>> (32 - c)); }
+  function addU32(a, b){ return (a + b) >>> 0; }
+
+  const s = [
+    7,12,17,22, 7,12,17,22, 7,12,17,22, 7,12,17,22,
+    5, 9,14,20, 5, 9,14,20, 5, 9,14,20, 5, 9,14,20,
+    4,11,16,23, 4,11,16,23, 4,11,16,23, 4,11,16,23,
+    6,10,15,21, 6,10,15,21, 6,10,15,21, 6,10,15,21
+  ];
+  const K = new Int32Array(64);
+  for (let i = 0; i < 64; i++){
+    K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) | 0;
+  }
+
+  const origLenBits = bytes.length * 8;
+  let totalLen = bytes.length + 1;
+  while (totalLen % 64 !== 56) totalLen++;
+  totalLen += 8;
+
+  const buf = new Uint8Array(totalLen);
+  buf.set(bytes, 0);
+  buf[bytes.length] = 0x80;
+  const lenLow = origLenBits >>> 0;
+  const lenHigh = Math.floor(origLenBits / 4294967296) >>> 0;
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(totalLen - 8, lenLow, true);
+  dv.setUint32(totalLen - 4, lenHigh, true);
+
+  let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+  const M = new Int32Array(16);
+
+  for (let chunk = 0; chunk < totalLen; chunk += 64){
+    for (let j = 0; j < 16; j++) M[j] = dv.getInt32(chunk + j * 4, true);
+    let A = a0, B = b0, C = c0, D = d0;
+    for (let i = 0; i < 64; i++){
+      let F, g;
+      if (i < 16){ F = (B & C) | (~B & D); g = i; }
+      else if (i < 32){ F = (D & B) | (~D & C); g = (5*i + 1) % 16; }
+      else if (i < 48){ F = B ^ C ^ D; g = (3*i + 5) % 16; }
+      else { F = C ^ (B | ~D); g = (7*i) % 16; }
+      F = addU32(F, addU32(A, addU32(K[i], M[g])));
+      A = D; D = C; C = B;
+      B = addU32(B, rotl(F, s[i]));
+    }
+    a0 = addU32(a0, A); b0 = addU32(b0, B); c0 = addU32(c0, C); d0 = addU32(d0, D);
+  }
+
+  function toHexLE(n){
+    n = n >>> 0;
+    return [n & 0xff, (n>>>8)&0xff, (n>>>16)&0xff, (n>>>24)&0xff]
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return toHexLE(a0) + toHexLE(b0) + toHexLE(c0) + toHexLE(d0);
+}
+
+function makeTarHeader(name, size, mtimeSec, mode){
+  const header = new Uint8Array(512);
+  const enc = new TextEncoder();
+  function put(offset, str){
+    const bytes = enc.encode(str);
+    header.set(bytes, offset);
+  }
+  put(0, name.slice(0, 100));
+  put(100, (mode || '0000644') + '\0');
+  put(108, '0000000\0');
+  put(116, '0000000\0');
+  put(124, size.toString(8).padStart(11, '0') + '\0');
+  put(136, mtimeSec.toString(8).padStart(11, '0') + '\0');
+  for (let i = 148; i < 156; i++) header[i] = 0x20; // chksum placeholder = spaces
+  header[156] = '0'.charCodeAt(0); // typeflag: regular file
+  put(257, 'ustar\0');
+  put(263, '00');
+
+  let sum = 0;
+  for (let i = 0; i < 512; i++) sum += header[i];
+  put(148, sum.toString(8).padStart(6, '0') + '\0 ');
+
+  return header;
+}
+
+function buildTar(files){
+  const mtime = Math.floor(Date.now() / 1000);
+  const chunks = [];
+  files.forEach(f => {
+    const header = makeTarHeader(f.name, f.data.length, mtime, f.mode);
+    chunks.push(header);
+    chunks.push(f.data);
+    const pad = (512 - (f.data.length % 512)) % 512;
+    if (pad > 0) chunks.push(new Uint8Array(pad));
+  });
+  chunks.push(new Uint8Array(512));
+  chunks.push(new Uint8Array(512));
+
+  const total = chunks.reduce((a, c) => a + c.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  chunks.forEach(c => { out.set(c, offset); offset += c.length; });
+  return out;
+}
+
+/* ---------------------------------------------------------
+   Package build + download
+--------------------------------------------------------- */
+function rfc2822(date){
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const pad = n => n.toString().padStart(2,'0');
+  const offMin = -date.getTimezoneOffset();
+  const sign = offMin >= 0 ? '+' : '-';
+  const offH = pad(Math.floor(Math.abs(offMin)/60));
+  const offM = pad(Math.abs(offMin)%60);
+  return `${days[date.getDay()]}, ${pad(date.getDate())} ${months[date.getMonth()]} ${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${sign}${offH}${offM}`;
+}
+
+function buildEfpBytes(server, description){
+  const now = new Date();
+  const installText = buildInstallScript(server);
+  const infoText =
+`Name: ${server.hostname}
+Platform: 
+Version: 1.0-${now.toISOString().replace(/[:.]/g,'').slice(0,15)}
+Description: '${description}'
+Build-Date: ${rfc2822(now)}
+`;
+  const enc = new TextEncoder();
+  const files = [
+    { name: 'info', data: enc.encode(infoText) },
+    { name: 'install', data: enc.encode(installText), mode: '0000755' },
+  ];
+  if (state.sections.layouts) state.layoutFiles.forEach(f => files.push({ name: f.name, data: f.bytes }));
+  if (state.sections.images) state.imageFiles.forEach(f => files.push({ name: f.name, data: f.bytes }));
+
+  const cksumLines = files.map(f => `${md5Hex(f.data)}  ${f.name}`);
+  files.push({ name: 'cksum.md5', data: enc.encode(cksumLines.join('\n') + '\n') });
+
+  const tarBytes = buildTar(files);
+  return pako.gzip(tarBytes, { level: 9 });
+}
+
+function downloadBlob(data, filename, mime){
+  const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+
+/* ---------------------------------------------------------
+   Save / load the configurator's own state (.json) so a setup
+   can be reopened and edited later. Includes uploaded layouts
+   and images (base64) so a reload restores the whole package.
+--------------------------------------------------------- */
+const CONFIG_APP = 'dc-configurator';
+const CONFIG_VERSION = 1;
+const SECTION_TOGGLE_IDS = {
+  timezone:'toggleTimezone', hostname:'toggleHostname', firewall:'toggleFirewall',
+  system:'toggleSystem', features:'toggleFeatures', renderDelay:'toggleRenderDelay',
+  layouts:'toggleLayouts', images:'toggleImages'
+};
+
+function bytesToB64(bytes){
+  let bin = '';
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  return btoa(bin);
+}
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function serializeConfig(){
+  return {
+    app: CONFIG_APP,
+    version: CONFIG_VERSION,
+    savedAt: new Date().toISOString(),
+    timezone: state.timezone,
+    sections: Object.assign({}, state.sections),
+    ifaces: JSON.parse(JSON.stringify(state.ifaces)),
+    bulk: {
+      prefix: document.getElementById('bulkPrefix').value,
+      start: document.getElementById('bulkStart').value,
+      count: document.getElementById('bulkCount').value,
+      previewIndex: state.bulk.previewIndex,
+      servers: state.bulk.servers.map(srv => ({
+        hostname: srv.hostname,
+        ips: Object.assign({}, srv.ips),
+        overrides: JSON.parse(JSON.stringify(getSrvOverrides(srv)))
+      }))
+    },
+    system: Object.assign({}, state.system),
+    remotes: state.remotes.slice(),
+    features: Object.assign({}, state.features),
+    renderDelay: Object.assign({}, state.renderDelay),
+    layoutFiles: state.layoutFiles.map(f => ({ name: f.name, b64: bytesToB64(f.bytes) })),
+    imageFiles: state.imageFiles.map(f => ({ name: f.name, b64: bytesToB64(f.bytes) })),
+    package: {
+      name: document.getElementById('pkgName').value,
+      description: document.getElementById('pkgDesc').value
+    }
+  };
+}
+
+function applyConfig(cfg){
+  if (!cfg || cfg.app !== CONFIG_APP) throw new Error('not a DC Configurator config file');
+  if (cfg.version > CONFIG_VERSION) throw new Error('config was saved by a newer version of this tool');
+
+  // timezone
+  if (cfg.timezone) {
+    state.timezone = cfg.timezone;
+    document.getElementById('timezoneSelect').value = cfg.timezone;
+  }
+
+  // interfaces (unknown/missing ones fall back to defaults)
+  IFACE_DEFS.forEach(def => {
+    const c = (cfg.ifaces || {})[def.key] || {};
+    state.ifaces[def.key] = {
+      enabled: c.enabled !== undefined ? !!c.enabled : def.defaultEnabled,
+      base: c.base !== undefined ? c.base : def.defaultBase,
+      gateway: c.gateway !== undefined ? c.gateway : (def.defaultGateway || '')
+    };
+  });
+  renderIfaceLists();
+
+  // global values; anything the file doesn't have keeps today's default
+  SYSTEM_FIELDS.forEach(f => { state.system[f.key] = (cfg.system && cfg.system[f.key] !== undefined) ? String(cfg.system[f.key]) : f.def; });
+  RENDER_DELAY_FIELDS.forEach(f => { state.renderDelay[f.key] = (cfg.renderDelay && cfg.renderDelay[f.key] !== undefined) ? Number(cfg.renderDelay[f.key]) : f.def; });
+  state.features = Object.assign({}, FEATURE_DEFAULTS, cfg.features || {});
+  state.remotes = Array.isArray(cfg.remotes) ? cfg.remotes.slice() : state.remotes;
+
+  // servers (+ their overrides, minus anything that is global-only or unknown)
+  const b = cfg.bulk || {};
+  if (b.prefix !== undefined) document.getElementById('bulkPrefix').value = b.prefix;
+  if (b.start !== undefined) document.getElementById('bulkStart').value = b.start;
+  if (b.count !== undefined) document.getElementById('bulkCount').value = b.count;
+  state.bulk.prefix = document.getElementById('bulkPrefix').value;
+  state.bulk.start = parseInt(document.getElementById('bulkStart').value, 10) || 1;
+  state.bulk.count = parseInt(document.getElementById('bulkCount').value, 10) || 1;
+  const sysKeys = SYSTEM_FIELDS.map(f => f.key);
+  state.bulk.servers = (b.servers || []).map((srv, i) => {
+    const ips = {};
+    IFACE_DEFS.forEach(def => {
+      ips[def.key] = (srv.ips && srv.ips[def.key] !== undefined) ? srv.ips[def.key] : incrementIp(state.ifaces[def.key].base, i);
+    });
+    const ov = srv.overrides || {};
+    const overrides = { system:{}, features:{} };
+    Object.keys(ov.system || {}).forEach(k => {
+      if (sysKeys.includes(k) && !PS_GLOBAL_ONLY.includes(k)) overrides.system[k] = String(ov.system[k]);
+    });
+    Object.keys(ov.features || {}).forEach(k => {
+      if (k in FEATURE_DEFAULTS) overrides.features[k] = !!ov.features[k];
+    });
+    return { hostname: srv.hostname, ips, overrides };
+  });
+  const wantIdx = (b.previewIndex >= 0 && b.previewIndex < state.bulk.servers.length) ? b.previewIndex : 0;
+  state.bulk.previewIndex = wantIdx;
+
+  // uploaded files
+  state.layoutFiles = (cfg.layoutFiles || []).map(f => ({ name: f.name, bytes: b64ToBytes(f.b64) }));
+  state.imageFiles = (cfg.imageFiles || []).map(f => ({ name: f.name, bytes: b64ToBytes(f.b64) }));
+
+  // package info
+  if (cfg.package) {
+    if (cfg.package.name !== undefined) document.getElementById('pkgName').value = cfg.package.name;
+    if (cfg.package.description !== undefined) document.getElementById('pkgDesc').value = cfg.package.description;
+  }
+
+  // redraw everything from the restored state
+  renderSystemFields();
+  renderRenderDelayFields();
+  renderFeatureToggles();
+  renderIpList();
+  renderFileChips();
+  renderImageFileChips();
+  updateJpegxsNotice();
+  renderServerTableHeader();
+  renderServerTable();
+  renderPreviewSelect();                                   // rebuilds the options (and resets the index)...
+  document.getElementById('previewSelect').value = String(wantIdx);
+  state.bulk.previewIndex = wantIdx;                        // ...so put the saved selection back
+
+  // section on/off switches last (their handlers re-render the preview)
+  Object.keys(SECTION_TOGGLE_IDS).forEach(key => {
+    const cb = document.getElementById(SECTION_TOGGLE_IDS[key]);
+    if (cfg.sections && cfg.sections[key] !== undefined) cb.checked = !!cfg.sections[key];
+    cb.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  renderPerServer();
+  renderPreview();
+}
+
+document.getElementById('saveCfgBtn').addEventListener('click', () => {
+  const statusEl = document.getElementById('statusLine');
+  try {
+    const cfg = serializeConfig();
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadBlob(JSON.stringify(cfg, null, 2), `dc-configurator-${stamp}.json`, 'application/json');
+    statusEl.className = 'status-line ok';
+    statusEl.textContent = `✓ config saved (${cfg.bulk.servers.length} server${cfg.bulk.servers.length === 1 ? '' : 's'}) — use "Load config" to pick it up again.`;
+  } catch (err) {
+    statusEl.className = 'status-line err';
+    statusEl.textContent = `✕ ${err.message}`;
+    console.error(err);
+  }
+});
+document.getElementById('loadCfgBtn').addEventListener('click', () => document.getElementById('loadCfgInput').click());
+document.getElementById('loadCfgInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  const statusEl = document.getElementById('statusLine');
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      applyConfig(JSON.parse(reader.result));
+      statusEl.className = 'status-line ok';
+      statusEl.textContent = `✓ loaded ${file.name} — ${state.bulk.servers.length} server${state.bulk.servers.length === 1 ? '' : 's'}.`;
+    } catch (err) {
+      statusEl.className = 'status-line err';
+      statusEl.textContent = `✕ couldn't load ${file.name}: ${err.message}`;
+      console.error(err);
+    }
+  };
+  reader.onerror = () => { statusEl.className = 'status-line err'; statusEl.textContent = `✕ couldn't read ${file.name}`; };
+  reader.readAsText(file);
+  e.target.value = '';   // allow re-loading the same file
+});
+
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('statusLine');
+  try {
+    statusEl.className = 'status-line';
+    statusEl.textContent = 'building package(s)…';
+
+    const desc = document.getElementById('pkgDesc').value.trim() || 'DreamCatcher Base Configuration';
+    const servers = state.bulk.servers;
+    if (servers.length === 0) throw new Error('add at least one server first');
+
+    const hostnames = servers.map(s => s.hostname);
+    const dupes = hostnames.filter((h, i) => hostnames.indexOf(h) !== i);
+    if (dupes.length) throw new Error(`duplicate hostname: ${dupes[0]}`);
+
+    if (servers.length === 1) {
+      const gz = buildEfpBytes(servers[0], desc);
+      downloadBlob(gz, `${servers[0].hostname}.efp`, 'application/gzip');
+      statusEl.className = 'status-line ok';
+      statusEl.textContent = `✓ ${servers[0].hostname}.efp downloaded — run on that server to apply.`;
+    } else {
+      const zip = new JSZip();
+      servers.forEach(srv => {
+        const gz = buildEfpBytes(srv, desc);
+        zip.file(`${srv.hostname}.efp`, gz);
+      });
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipName = document.getElementById('pkgName').value.trim() || 'dreamcatcher-deploy-batch';
+      downloadBlob(zipBlob, `${zipName}.zip`, 'application/zip');
+      statusEl.className = 'status-line ok';
+      statusEl.textContent = `✓ ${zipName}.zip downloaded — ${servers.length} servers, one .efp per hostname.`;
+    }
+  } catch (err) {
+    statusEl.className = 'status-line err';
+    statusEl.textContent = `✕ ${err.message}`;
+    console.error(err);
+  }
+});
+</script>
+</body>
+</html>
