@@ -2,454 +2,323 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DreamCatcher Base Config — EFP Builder</title>
+<script>try{var t=localStorage.getItem('lmmon-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-  :root{
-    --bg: #12151a;
-    --panel: #1a1f27;
-    --panel-2: #20262f;
-    --hairline: #2b323d;
-    --text: #e8ecf1;
-    --text-dim: #8892a0;
-    --text-faint: #5b6472;
-    --tally-green: #21c96f;
-    --tally-green-dim: #163a29;
-    --tally-red: #e8453c;
-    --tally-red-dim: #3d1e1c;
-    --amber: #f2a93a;
-    --amber-dim: #3a2f16;
-    --mono: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace;
-    --sans: 'IBM Plex Sans', -apple-system, Segoe UI, sans-serif;
+/* Design system matches the Live-Media Monitoring Tools: navy banner + sub-bar, 220px rail, masthead, cards.
+   Light "warm paper" by default, dark via prefers-color-scheme or the theme switch. */
+:root{
+  --ink:#1f2530; --ink-soft:#5a5f68; --line:#dad6ce; --line-soft:#e9e5de;
+  --bg:#f5f3ee; --surface:#ffffff; --rail-bg:#ece8e0;
+  --accent:#1b2a41; --accent-ink:#1b2a41; --accent-soft:#e1e7f0;
+  --warn:#e8710a; --warn-ink:#a84c00; --warn-soft:#fdebd9; --caution:#d4a106; --caution-ink:#7a5b00; --caution-soft:#fdf4cf;
+  --good:#3f7a58; --good-soft:#e2efe6; --good-txt:#2f7a4a; --err:#c0392b;
+  --banner:#1b2a41; --save:var(--banner); --save-hover:#26395a; --focus:#1b2a41; --subbar:#243552;
+  --term-bg:#11151d; --term-head:#1b2230; --term-ink:#e6ebf2; --term-dim:#7d8798; --term-add:#7fce9d; --term-sec:#9fb0c3;
+  --bar-h:44px; --sub-h:0px;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#eef1f6; --ink-soft:#aab3c2; --line:#333e4f; --line-soft:#26303e;
+    --bg:#11151d; --surface:#171d27; --rail-bg:#161b24;
+    --accent:#8fb3e8; --accent-ink:#cfe0f7; --accent-soft:#1d2a3d;
+    --warn:#ff9a3d; --warn-ink:#ffd0a3; --warn-soft:#3d2410; --caution:#e8c14a; --caution-ink:#f5dc8a; --caution-soft:#3a3011;
+    --good:#7fce9d; --good-soft:#173125; --good-txt:#7fce9d; --err:#f0443e;
+    --banner:#0e1624; --save:var(--accent); --save-hover:#b3cdf0; --focus:#8fb3e8; --subbar:#152033;
+    --term-bg:#000000; --term-head:#0b0f15;
+    color-scheme: dark;
   }
-  @font-face{ font-family: 'IBM Plex Mono'; src: local('IBM Plex Mono'); }
-  * { box-sizing: border-box; }
-  html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--sans); }
-  body{ min-height:100vh; }
-  a { color: inherit; }
+}
+:root[data-theme="dark"]{
+  --ink:#eef1f6; --ink-soft:#aab3c2; --line:#333e4f; --line-soft:#26303e;
+  --bg:#11151d; --surface:#171d27; --rail-bg:#161b24;
+  --accent:#8fb3e8; --accent-ink:#cfe0f7; --accent-soft:#1d2a3d;
+  --warn:#ff9a3d; --warn-ink:#ffd0a3; --warn-soft:#3d2410; --caution:#e8c14a; --caution-ink:#f5dc8a; --caution-soft:#3a3011;
+  --good:#7fce9d; --good-soft:#173125; --good-txt:#7fce9d; --err:#f0443e;
+  --banner:#0e1624; --save:var(--accent); --save-hover:#b3cdf0; --focus:#8fb3e8; --subbar:#152033;
+  --term-bg:#000000; --term-head:#0b0f15;
+  color-scheme: dark;
+}
 
-  .rack {
-    max-width: 1160px;
-    margin: 0 auto;
-    padding: 28px 20px 80px;
-  }
+*{box-sizing:border-box} [hidden]{display:none !important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px}
+a{color:inherit}
 
-  .rack-header{
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    border-bottom:1px solid var(--hairline);
-    padding-bottom:18px;
-    margin-bottom:22px;
-    flex-wrap:wrap;
-    gap:10px;
-  }
-  .rack-header h1{
-    font-size:19px;
-    font-weight:600;
-    letter-spacing:0.2px;
-    margin:0;
-  }
-  .rack-header h1 .dim{ color:var(--text-dim); font-weight:400; }
-  .rack-tag{
-    font-family:var(--mono);
-    font-size:11px;
-    color:var(--text-faint);
-    letter-spacing:0.5px;
-    text-transform:uppercase;
-  }
+/* ---------- banner + sub-bar ---------- */
+.identity-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;display:flex;align-items:center;gap:14px;background:var(--banner);color:#fff;padding:10px 18px;min-height:var(--bar-h)}
+.identity-brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-logo{height:21px;width:auto;display:block;flex:none}
+.brand-suffix{color:rgba(255,255,255,.72);font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding-left:12px;border-left:1px solid rgba(255,255,255,.22);white-space:nowrap}
+.theme-switch{margin-left:auto;display:inline-flex;align-items:center;gap:8px;background:none;border:none;color:rgba(255,255,255,.72);
+  font-family:var(--mono);font-size:.66rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:4px 2px}
+.theme-switch svg{width:14px;height:14px}
+.theme-switch .ts-track{position:relative;width:34px;height:18px;border-radius:99px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);transition:background .12s}
+.theme-switch .ts-knob{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .12s}
+.theme-switch[aria-checked="true"] .ts-track{background:#3d8bea;border-color:#3d8bea}
+.theme-switch[aria-checked="true"] .ts-knob{left:18px}
+.theme-switch .ts-light,.theme-switch .ts-dark{display:inline-flex;align-items:center;gap:5px}
+.theme-switch[aria-checked="false"] .ts-light,.theme-switch[aria-checked="true"] .ts-dark{color:#fff}
+.theme-switch:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:4px}
 
-  .layout{
-    display:grid;
-    grid-template-columns: 1fr 380px;
-    gap: 20px;
-  }
-  @media (max-width: 880px){
-    .layout{ grid-template-columns: 1fr; }
-  }
+.sub-bar{position:sticky;top:calc(var(--bar-h) + env(safe-area-inset-top,0px));z-index:39;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--subbar);color:#fff;padding:8px 18px;border-top:1px solid rgba(255,255,255,.08);color-scheme:dark}
+.sb-label{font-family:var(--mono);font-size:.62rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.62)}
+.sb-btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:99px;font:inherit;font-size:.76rem;font-weight:600;white-space:nowrap;cursor:pointer;
+  background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3);transition:background .12s,border-color .12s}
+.sb-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.55)}
+.sb-btn.primary{background:#fff;color:#1b2a41;border-color:#fff}
+.sb-btn.primary:hover{background:#e1e7f0}
+.sb-btn:disabled{opacity:.55;cursor:default}
+.sb-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.sb-btn svg{width:14px;height:14px}
+.sb-sep{width:1px;height:20px;background:rgba(255,255,255,.2)}
+.status-line{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:.72rem;font-weight:600;padding:4px 11px;border-radius:99px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.status-line::before{content:"";width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4);flex:none}
+.status-line.ok::before{background:#7fce9d}
+.status-line.err::before{background:#f3a09a}
+.status-line:empty{display:none}
+@media (max-width:880px){ .sub-bar{position:static} .status-line{margin-left:0} }
+@media (max-width:520px){ .theme-switch .ts-word{display:none} .brand-suffix{display:none} }
 
-  .card{
-    background:var(--panel);
-    border:1px solid var(--hairline);
-    border-radius:6px;
-    margin-bottom:16px;
-    overflow:hidden;
-  }
-  .card-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:12px 16px;
-    border-bottom:1px solid var(--hairline);
-    background:var(--panel-2);
-  }
-  .card-head .section-tag{
-    font-family:var(--mono);
-    font-size:13px;
-    color:var(--tally-green);
-    font-weight:600;
-  }
-  .card-head .section-sub{
-    font-size:11px;
-    color:var(--text-faint);
-  }
-  .card-body{ padding:16px; }
+/* ---------- shell + rail ---------- */
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:calc(100vh - var(--bar-h))}
+.railnav{position:sticky;top:calc(var(--bar-h) + var(--sub-h) + env(safe-area-inset-top,0px));height:calc(100vh - var(--bar-h) - var(--sub-h));display:flex;flex-direction:column;background:var(--rail-bg);border-right:1px solid var(--line);overflow-y:auto}
+.rail-group{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);padding:16px 16px 6px}
+.rail-group .rg-count{letter-spacing:.06em}
+.rail-item{display:flex;align-items:center;gap:10px;width:100%;padding:11px 16px;border:none;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:.82rem;font-weight:600;text-align:left;cursor:pointer}
+.rail-item svg{width:20px;height:20px;flex:none;color:var(--accent-ink)}
+.rail-item:hover{background:var(--line-soft)}
+.rail-item[aria-current="true"]{background:var(--accent-soft)}
+.rail-item:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.rail-item.ps-item{padding:9px 16px}
+.rail-item.ps-item.sel:not([aria-current="true"]){box-shadow:inset 3px 0 0 var(--line)}
+.rail-item.ps-item[aria-current="true"]{box-shadow:inset 3px 0 0 var(--accent)}
+.ps-item .ps-txt{display:flex;flex-direction:column;min-width:0;flex:1}
+.ps-item .nm{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps-item .meta{display:block;margin-top:2px;font-family:var(--mono);font-size:.62rem;font-weight:400;color:var(--ink-soft);white-space:nowrap}
+.ps-badge{flex:none;background:var(--warn);color:#1b1200;border-radius:99px;font-size:.62rem;font-weight:700;padding:1px 7px;font-family:var(--mono)}
+.rail-empty{padding:10px 16px;font-size:.74rem;color:var(--ink-soft)}
+.rail-foot{margin-top:auto;border-top:1px solid var(--line)}
+.rail-ver{font-size:.62rem;color:var(--ink-soft);line-height:1.6;padding:12px 16px 16px}
+@media (max-width:880px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .railnav{position:static;height:auto;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line)}
+  .rail-group,.rail-ver,.ps-item .meta{display:none}
+  .rail-item,.rail-item.ps-item{flex:0 0 86px;flex-direction:column;justify-content:center;gap:5px;padding:10px 6px;border-bottom:none;border-right:1px solid var(--line);font-size:.64rem;text-align:center;line-height:1.2}
+  .rail-item.ps-item[aria-current="true"],.rail-item.ps-item.sel:not([aria-current="true"]){box-shadow:none}
+  .ps-item .ps-txt{align-items:center;flex:none}
+  .rail-foot{display:none}
+  #psSideList{display:contents}
+}
 
-  .grid2{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:12px 16px;
-  }
-  @media (max-width:560px){ .grid2{ grid-template-columns: 1fr; } }
+/* ---------- content ---------- */
+.content{padding:14px 18px 40px;min-width:0}
+.wrap{max-width:1780px;margin:0 auto}
+.masthead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--banner);padding-bottom:8px;margin-bottom:12px}
+:root[data-theme="dark"] .masthead{border-bottom-color:var(--line)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .masthead{border-bottom-color:var(--line)} }
+.masthead h1{font-size:1.5rem;font-weight:600;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.page-tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+.masthead-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
+@media (max-width:1180px){ .layout{grid-template-columns:minmax(0,1fr)} }
+.preview-col{position:sticky;top:calc(var(--bar-h) + var(--sub-h) + 14px);min-width:0}
+@media (max-width:1180px){ .preview-col{position:static} }
+.page{display:none}
+.page.active{display:block}
 
-  .field{ margin-bottom:4px; }
-  .field label{
-    display:block;
-    font-family:var(--mono);
-    font-size:11.5px;
-    color:var(--text-dim);
-    margin-bottom:5px;
-  }
-  .field label .key{ color: #9fb0c3; }
-  select, input[type=text], input[type=number]{
-    width:100%;
-    background:#0e1116;
-    border:1px solid var(--hairline);
-    color:var(--text);
-    font-family:var(--mono);
-    font-size:13px;
-    padding:8px 10px;
-    border-radius:4px;
-    outline:none;
-  }
-  select:focus, input:focus{ border-color: var(--tally-green); }
+/* ---------- cards ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px 16px;min-width:0}
+.page > .card + .card{margin-top:14px}
+.card-head{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+.card-head::after{content:"";flex:1;height:1px;background:var(--line-soft);order:1}
+.card-head .section-sub{order:2}
+.card-head-left{display:flex;align-items:center;gap:9px}
+.card-head .section-tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:600}
+:root[data-theme="dark"] .card-head .section-tag{color:var(--accent)}
+.card-head .section-sub{font-size:.7rem;color:var(--ink-soft);white-space:nowrap}
+.card-body{padding:0}
+.section-toggle{width:16px;height:16px;accent-color:var(--accent);flex:none;cursor:pointer;margin:0}
+.section-disabled{opacity:.45;pointer-events:none;filter:grayscale(.5)}
 
-  .toggle-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:8px 0;
-    border-bottom:1px solid var(--hairline);
-  }
-  .toggle-row:last-child{ border-bottom:none; }
-  .toggle-label{
-    font-family:var(--mono);
-    font-size:12.5px;
-    color:var(--text);
-  }
-  .switch{
-    position:relative;
-    width:42px;
-    height:22px;
-    flex:none;
-    cursor:pointer;
-  }
-  .switch input{ display:none; }
-  .switch .track{
-    position:absolute; inset:0;
-    background:var(--tally-red-dim);
-    border:1px solid var(--tally-red);
-    border-radius:11px;
-    transition: background .15s, border-color .15s;
-  }
-  .switch .knob{
-    position:absolute;
-    top:2px; left:2px;
-    width:16px; height:16px;
-    border-radius:50%;
-    background:var(--tally-red);
-    transition: left .15s, background .15s;
-  }
-  .switch input:checked + .track{
-    background:var(--tally-green-dim);
-    border-color:var(--tally-green);
-  }
-  .switch input:checked + .track .knob{ left:22px; background:var(--tally-green); }
-  .switch input:checked ~ .knob{ left:22px; background:var(--tally-green); }
+/* ---------- fields ---------- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+@media (max-width:560px){ .grid2{grid-template-columns:1fr} }
+.field{margin-bottom:0}
+.field label{display:block;font-size:.78rem;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+.field label .key{font-family:var(--mono);font-weight:500;color:var(--ink)}
+select,input[type=text],input[type=number]{width:100%;font:inherit;font-size:.88rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+select:disabled,input:disabled{opacity:.55;cursor:not-allowed}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-family:var(--mono);font-size:.78rem;color:var(--ink)}
+.switch{position:relative;width:38px;height:20px;flex:none;cursor:pointer}
+.switch input{display:none}
+.switch .track{position:absolute;inset:0;background:var(--line);border:1px solid var(--line);border-radius:99px;transition:background .12s,border-color .12s}
+.switch .knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .12s}
+.switch input:checked + .track{background:var(--good);border-color:var(--good)}
+.switch input:checked + .track .knob{left:20px}
 
-  .ip-list{ display:flex; flex-direction:column; gap:8px; }
-  .ip-row{ display:flex; gap:8px; }
-  .ip-row input{ flex:1; }
-  .btn-mini{
-    background:#0e1116;
-    border:1px solid var(--hairline);
-    color:var(--text-dim);
-    font-family:var(--mono);
-    font-size:12px;
-    padding:0 12px;
-    border-radius:4px;
-    cursor:pointer;
-  }
-  .btn-mini:hover{ border-color:var(--tally-red); color:var(--tally-red); }
-  .btn-add{
-    margin-top:8px;
-    background:transparent;
-    border:1px dashed var(--hairline);
-    color:var(--text-dim);
-    font-family:var(--mono);
-    font-size:12px;
-    padding:7px 10px;
-    border-radius:4px;
-    cursor:pointer;
-    width:100%;
-    text-align:left;
-  }
-  .btn-add:hover{ border-color:var(--tally-green); color:var(--tally-green); }
+/* ---------- buttons ---------- */
+.btn-secondary,.btn-mini,.ps-reset{display:inline-flex;align-items:center;gap:6px;font:inherit;font-weight:600;cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+.btn-secondary,.tool-reset-btn{height:32px;padding:0 13px;border-radius:99px;font-size:.78rem;white-space:nowrap;color:var(--ink-soft);background:transparent;border:1px solid var(--line);margin-top:6px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-family:inherit}
+.tool-reset-btn{margin-top:0}
+.btn-secondary:hover,.tool-reset-btn:hover{color:var(--ink);background:var(--surface);border-color:var(--ink-soft)}
+.btn-add{margin-top:10px;width:100%;text-align:left;background:transparent;border:1px dashed var(--line);color:var(--ink-soft);font:inherit;font-size:.78rem;font-weight:600;padding:8px 12px;border-radius:6px;cursor:pointer}
+.btn-add:hover{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+.btn-mini{background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);font-size:.74rem;padding:0 11px;height:28px;border-radius:6px}
+.btn-mini:hover{border-color:var(--err);color:var(--err)}
+.ip-list{display:flex;flex-direction:column;gap:8px}
+.ip-row{display:flex;gap:8px}
+.ip-row input{flex:1}
 
-  .notice{
-    display:flex;
-    gap:8px;
-    align-items:flex-start;
-    font-size:12px;
-    color:var(--amber);
-    background:var(--amber-dim);
-    border:1px solid #5a4720;
-    border-radius:4px;
-    padding:9px 11px;
-    margin-top:12px;
-    font-family:var(--mono);
-    line-height:1.5;
-  }
+/* ---------- notices, dropzone, chips ---------- */
+.notice{display:flex;gap:8px;align-items:flex-start;font-size:.78rem;color:var(--caution-ink);background:var(--caution-soft);border-left:3px solid var(--caution);border-radius:0 6px 6px 0;padding:9px 12px;margin-top:12px;line-height:1.5}
+.dropzone{border:1px dashed var(--line);border-radius:8px;padding:18px;text-align:center;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;background:var(--bg);transition:border-color .12s,color .12s,background .12s}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+.file-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;margin-top:8px;font-family:var(--mono);font-size:.74rem}
+.file-chip .path{color:var(--ink-soft)}
+.file-chip .path b{color:var(--ink);font-weight:600}
 
-  .dropzone{
-    border:1px dashed var(--hairline);
-    border-radius:5px;
-    padding:18px;
-    text-align:center;
-    font-family:var(--mono);
-    font-size:12px;
-    color:var(--text-faint);
-    cursor:pointer;
-    transition: border-color .15s, color .15s;
-  }
-  .dropzone:hover, .dropzone.drag{ border-color:var(--tally-green); color:var(--tally-green); }
-  .file-chip{
-    display:flex; align-items:center; justify-content:space-between;
-    background:#0e1116;
-    border:1px solid var(--hairline);
-    border-radius:4px;
-    padding:7px 10px;
-    margin-top:8px;
-    font-family:var(--mono);
-    font-size:12px;
-  }
-  .file-chip .path{ color: var(--text-dim); }
-  .file-chip .path b{ color: var(--text); font-weight:500; }
+/* ---------- servers / interfaces ---------- */
+.cascade-row{display:grid;grid-template-columns:1fr 90px 90px;gap:10px 16px;margin-bottom:12px}
+.cascade-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:4px}
+.iface-list{margin:10px 0 4px}
+.iface-row{display:grid;grid-template-columns:24px 96px 1fr 1fr;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-soft)}
+.iface-row:last-child{border-bottom:none}
+.iface-row .iface-label{font-family:var(--mono);font-size:.78rem;color:var(--ink)}
+.iface-row .iface-mac{display:block;font-size:.66rem;color:var(--ink-soft);margin-top:1px}
+.iface-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);margin:0}
+.iface-row input[type=text]{font-size:.8rem;padding:6px 8px}
+.iface-row.disabled .iface-label{color:var(--ink-soft)}
+.iface-row.disabled input[type=text]{opacity:.45}
+.srv-table-wrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:8px;padding:8px 8px 4px;background:var(--bg)}
+.srv-table{width:auto;border-collapse:collapse}
+.srv-table th{text-align:left;font-family:var(--mono);font-size:.62rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;padding:0 8px 6px;font-weight:600;white-space:nowrap}
+.srv-table td{padding:4px 8px 4px 0}
+.srv-table input{font-size:.8rem;padding:6px 8px;width:150px;min-width:150px;background:var(--surface)}
+.srv-table .idx{font-family:var(--mono);font-size:.7rem;color:var(--ink-soft);width:22px;padding-right:4px}
+.srv-table .rm-col{width:28px}
 
-  /* preview / terminal column */
-  .term{
-    position:sticky;
-    top:20px;
-    background:#0b0d11;
-    border:1px solid var(--hairline);
-    border-radius:6px;
-    overflow:hidden;
-  }
-  .term-head{
-    display:flex; align-items:center; gap:8px;
-    padding:10px 14px;
-    background:var(--panel-2);
-    border-bottom:1px solid var(--hairline);
-  }
-  .term-dot{ width:9px; height:9px; border-radius:50%; }
-  .term-title{
-    font-family:var(--mono);
-    font-size:11.5px;
-    color:var(--text-faint);
-    margin-left:4px;
-  }
-  .term-body{
-    font-family:var(--mono);
-    font-size:11.5px;
-    line-height:1.65;
-    padding:14px;
-    max-height:520px;
-    overflow-y:auto;
-    white-space:pre-wrap;
-    word-break:break-all;
-  }
-  .term-body .l-add{ color:var(--tally-green); }
-  .term-body .l-del{ color:var(--tally-red); opacity:.75; }
-  .term-body .l-cmt{ color:var(--text-faint); }
-  .term-body .l-sec{ color:#9fb0c3; }
+/* ---------- install preview (always a dark console) ---------- */
+.term{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--term-bg)}
+.term-head{display:flex;align-items:center;gap:7px;padding:9px 14px;background:var(--term-head);border-bottom:1px solid rgba(255,255,255,.08)}
+.term-dot{width:9px;height:9px;border-radius:50%}
+.term-title{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.62);margin-left:4px}
+.preview-select-wrap{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.08);background:var(--term-head)}
+.preview-select-wrap select{font-size:.74rem;padding:6px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);color:#fff;font-family:var(--mono)}
+.preview-select-wrap select option{background:#1f2d45;color:#fff}
+.term-body{font-family:var(--mono);font-size:.7rem;line-height:1.65;padding:14px;max-height:calc(100vh - var(--bar-h) - var(--sub-h) - 170px);min-height:220px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;color:var(--term-ink)}
+.term-body .l-add{color:var(--term-add)}
+.term-body .l-del{color:#f3a09a;opacity:.85}
+.term-body .l-cmt{color:var(--term-dim)}
+.term-body .l-sec{color:var(--term-sec)}
 
-  .generate-bar{
-    margin-top:16px;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
-  .field-inline{
-    display:flex;
-    gap:10px;
-  }
-  .field-inline .field{ flex:1; }
+/* ---------- hover tooltips ---------- */
+.has-tip{cursor:help;border-bottom:1px dotted var(--ink-soft)}
+#tipBox{position:fixed;z-index:9999;display:none;max-width:340px;background:var(--banner);border:1px solid rgba(255,255,255,.22);color:#fff;
+  font-family:var(--sans);font-size:.76rem;line-height:1.5;padding:9px 11px;border-radius:8px;pointer-events:none;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+#tipBox .tip-key{display:block;font-family:var(--mono);font-size:.68rem;color:#7cc0f0;margin-bottom:4px}
 
-  .btn-generate{
-    background:var(--tally-green);
-    color:#08130d;
-    border:none;
-    font-family:var(--mono);
-    font-weight:600;
-    font-size:13.5px;
-    letter-spacing:0.3px;
-    padding:13px 16px;
-    border-radius:5px;
-    cursor:pointer;
-    transition: filter .12s;
-  }
-  .btn-generate:hover{ filter:brightness(1.08); }
-  .btn-generate:active{ filter:brightness(0.94); }
-  .btn-generate:disabled{ background:var(--hairline); color:var(--text-faint); cursor:not-allowed; }
+/* ---------- tabs (segmented control, same look as the Live-Media tools) ---------- */
+.tabbar{margin:0 0 14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden;background:var(--surface);max-width:100%}
+.seg button{border:none;background:transparent;color:var(--ink-soft);font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:8px 16px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button:hover{background:var(--line-soft)}
+.seg button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.tab-n{background:var(--warn);color:#1b1200;border-radius:99px;font-size:.6rem;font-weight:700;padding:0 6px;letter-spacing:0}
+.tab-n:empty{display:none}
+.tabpanel{display:none}
+.tabpanel.active{display:block}
+.tabpanel > .card + .card{margin-top:14px}
+@media (max-width:560px){ .seg button{padding:8px 10px;font-size:.62rem} }
 
-  .status-line{
-    font-family:var(--mono);
-    font-size:11.5px;
-    color:var(--text-faint);
-    text-align:center;
-    min-height:16px;
-  }
-  .status-line.ok{ color:var(--tally-green); }
-  .status-line.err{ color:var(--tally-red); }
-
-  .srv-table-wrap{
-    overflow-x: auto;
-    margin-top: 12px;
-    border: 1px solid var(--hairline);
-    border-radius: 4px;
-  }
-  .srv-table{ width:auto; border-collapse:collapse; }
-  .srv-table th{
-    text-align:left;
-    font-family:var(--mono);
-    font-size:10.5px;
-    color:var(--text-faint);
-    text-transform:uppercase;
-    letter-spacing:0.4px;
-    padding:0 8px 6px;
-    font-weight:500;
-  }
-  .srv-table td{ padding:4px 8px 4px 0; }
-  .srv-table input{ font-size:12.5px; padding:6px 8px; width:150px; min-width:150px; }
-  .srv-table th{ white-space:nowrap; }
-  .srv-table .idx{
-    font-family:var(--mono);
-    font-size:11px;
-    color:var(--text-faint);
-    width:22px;
-    padding-right:4px;
-  }
-  .srv-table .rm-col{ width:28px; }
-  .cascade-row{
-    display:grid;
-    grid-template-columns: 1fr 90px 90px;
-    gap:10px 16px;
-    margin-bottom:10px;
-  }
-  .cascade-row-2{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:10px 16px;
-    margin-bottom:4px;
-  }
-  .btn-secondary{
-    background:transparent;
-    border:1px solid var(--tally-green);
-    color:var(--tally-green);
-    font-family:var(--mono);
-    font-size:12px;
-    padding:8px 12px;
-    border-radius:4px;
-    cursor:pointer;
-    margin-top:4px;
-  }
-  .btn-secondary:hover{ background:var(--tally-green-dim); }
-  .has-tip{ cursor:help; border-bottom:1px dotted var(--text-faint); }
-  #tipBox{
-    position:fixed; z-index:9999; display:none; max-width:340px;
-    background:#0e1116; border:1px solid var(--tally-green); color:var(--text);
-    font-family:var(--sans); font-size:12px; line-height:1.5;
-    padding:9px 11px; border-radius:5px; pointer-events:none;
-    box-shadow:0 6px 24px rgba(0,0,0,.5);
-  }
-  #tipBox .tip-key{ display:block; font-family:var(--mono); font-size:11px; color:var(--tally-green); margin-bottom:4px; }
-  /* per-server overrides */
-  .ps-hint{ font-size:12px; color:var(--text-dim); line-height:1.5; margin:0 0 12px; }
-  .ps-sub{ font-family:var(--mono); font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.5px; margin:18px 0 8px; }
-  .ps-sub .off{ color:var(--amber); text-transform:none; letter-spacing:0; margin-left:6px; }
-  .ps-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; }
-  .ps-head .ps-title{ font-family:var(--mono); font-size:13px; color:var(--text); }
-  .ps-note{ font-family:var(--mono); font-size:10.5px; color:var(--amber); margin-left:8px; }
-  .ps-reset{ background:#0e1116; border:1px solid var(--hairline); color:var(--text-dim); font-family:var(--mono); font-size:11px; padding:1px 7px; border-radius:3px; cursor:pointer; margin-left:8px; }
-  .ps-reset:hover{ border-color:var(--amber); color:var(--amber); }
-  .field.ovr select, .field.ovr input{ border-color:var(--amber); }
-  .toggle-row.ovr .toggle-label{ color:var(--amber); }
-  .srv-table input.ovr{ border-color:var(--amber); }
-  .srv-table input.num{ width:84px; min-width:84px; }
-  .srv-table th .gl{ display:block; color:var(--text-faint); text-transform:none; letter-spacing:0; font-size:10px; }
-  .srv-table td.ps-sum{ font-family:var(--mono); font-size:11px; color:var(--text-dim); white-space:normal; min-width:160px; max-width:300px; padding-right:12px; }
-  .srv-table tr.ps-sel td{ background:#12171e; }
-  .preview-select-wrap{
-    padding:10px 14px;
-    border-bottom:1px solid var(--hairline);
-    background:#0e1116;
-  }
-  .preview-select-wrap select{ width:100%; font-size:12px; padding:6px 8px; }
-
-  .iface-list{ margin: 10px 0 4px; }
-  .iface-row{
-    display:grid;
-    grid-template-columns: 24px 96px 1fr 1fr;
-    align-items:center;
-    gap:10px;
-    padding:7px 0;
-    border-bottom:1px solid var(--hairline);
-  }
-  .iface-row:last-child{ border-bottom:none; }
-  .iface-row .iface-label{
-    font-family:var(--mono);
-    font-size:12.5px;
-    color:var(--text);
-  }
-  .iface-row .iface-mac{
-    display:block;
-    font-size:10.5px;
-    color:var(--text-faint);
-    margin-top:1px;
-  }
-  .iface-row input[type=checkbox]{
-    width:16px; height:16px;
-    accent-color: var(--tally-green);
-  }
-  .iface-row input[type=text]{ font-size:12.5px; padding:6px 8px; }
-  .iface-row.disabled .iface-label{ color: var(--text-faint); }
-  .iface-row.disabled input[type=text]{ opacity:0.45; }
-
-  .section-disabled{ opacity:0.35; pointer-events:none; filter: grayscale(0.4); }
-
-  .card-head-left{ display:flex; align-items:center; gap:9px; }
-  .section-toggle{
-    width:16px; height:16px;
-    accent-color: var(--tally-green);
-    flex:none;
-    cursor:pointer;
-  }
+/* ---------- per-server config ---------- */
+.ps-hint{font-size:.76rem;color:var(--ink-soft);line-height:1.55;margin:0 0 12px}
+.ps-hint code,.card code{font-family:var(--mono);font-size:.74rem;background:var(--bg);border:1px solid var(--line-soft);border-radius:4px;padding:1px 5px}
+.ps-main{min-width:0}
+.ps-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
+.ps-head .ps-title{font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--ink)}
+.ps-subtitle{font-size:.72rem;color:var(--ink-soft);margin-top:2px}
+.ps-sub{font-family:var(--mono);font-size:.66rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+.ps-sub::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+.ps-sub .off{color:var(--warn-ink);text-transform:none;letter-spacing:0;order:2}
+.ps-io{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.ps-main .grid2{gap:12px 16px}
+.ps-main .field label{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:22px}
+.ps-main .field label .key{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ps-note{font-family:var(--mono);font-size:.64rem;color:var(--warn-ink);margin-left:8px}
+.ps-foot{display:block;margin:4px 0 0 !important;line-height:1.3}
+.ps-foot:empty{display:none}
+.ps-reset{background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);font-size:.7rem;padding:0 7px;height:20px;border-radius:6px;margin-left:8px}
+.ps-reset:hover{border-color:var(--warn);color:var(--warn-ink)}
+.field.ovr select,.field.ovr input{border-color:var(--warn)}
+.toggle-row.ovr .toggle-label{color:var(--warn-ink)}
+@media (max-width:700px){ .ps-io{grid-template-columns:1fr} }
 </style>
+
 </head>
 <body>
 
-<div class="rack">
-  <div class="rack-header">
-    <h1>DreamCatcher Base Config <span class="dim">— EFP Builder</span></h1>
-    <div class="rack-tag">/etc/dreamcatcher.ini · /etc/features.conf · /etc/vue/layouts/</div>
-  </div>
+<header class="identity-bar" id="identityBar">
+  <div class="identity-brand"><svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 181.40 20" role="img" aria-label="Live Media"><g transform="translate(7,5)" fill="none" stroke-width="1.45" stroke-linecap="square" stroke-linejoin="round"><path d="M0,0 V7.4 Q0,10 2.6,10 H17" transform="translate(0.00,0)" stroke="#ffffff"/><path d="M0,0 V10" transform="translate(21.60,0)" stroke="#ffffff"/><path d="M0,0 L8.5,10 L17,0" transform="translate(26.20,0)" stroke="#ffffff"/><path d="M17,0 H2.6 Q0,0 0,2.6 V7.4 Q0,10 2.6,10 H17" transform="translate(47.80,0)" stroke="#ffffff"/><path d="M0,5.0 H14" transform="translate(47.80,0)" stroke="#ffffff"/><path d="M0,5.0 H7" transform="translate(69.40,0)" stroke="#3d8bea"/><path d="M0,10 V2.6 Q0,0 2.6,0 H14.4 Q17,0 17,2.6 V10" transform="translate(81.00,0)" stroke="#3d8bea"/><path d="M8.5,0 V10" transform="translate(81.00,0)" stroke="#3d8bea"/><path d="M17,0 H2.6 Q0,0 0,2.6 V7.4 Q0,10 2.6,10 H17" transform="translate(102.60,0)" stroke="#3d8bea"/><path d="M0,5.0 H14" transform="translate(102.60,0)" stroke="#3d8bea"/><path d="M0,0 H14.4 Q17,0 17,2.6 V7.4 Q17,10 14.4,10 H0 Z" transform="translate(124.20,0)" stroke="#3d8bea"/><path d="M0,0 V10" transform="translate(145.80,0)" stroke="#3d8bea"/><path d="M0,10 V2.6 Q0,0 2.6,0 H14.4 Q17,0 17,2.6 V10" transform="translate(150.40,0)" stroke="#3d8bea"/><path d="M0,5.8 H17" transform="translate(150.40,0)" stroke="#3d8bea"/></g></svg><span class="brand-suffix">Config Builder</span></div>
+  <button class="theme-switch" id="themeSwitch" type="button" role="switch" aria-checked="false" aria-label="Dark mode">
+    <span class="ts-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span class="ts-word">Light</span></span>
+    <span class="ts-track"><span class="ts-knob"></span></span>
+    <span class="ts-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span class="ts-word">Dark</span></span>
+  </button>
+</header>
 
-  <div class="layout">
-    <div>
+<div class="sub-bar" id="subBar">
+  <button class="sb-btn primary" type="button" id="generateBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg>Generate deployment package</button>
+  <span class="sb-sep" aria-hidden="true"></span>
+  <button class="sb-btn" type="button" id="saveCfgBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg>Save config</button>
+  <button class="sb-btn" type="button" id="loadCfgBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 14l5-5 5 5M4 4h16"/></svg>Load config</button>
+  <input type="file" id="loadCfgInput" accept=".json,application/json" style="display:none;">
+  <span class="status-line" id="statusLine"></span>
+</div>
 
-      <!-- TIMEZONE -->
+<div class="shell">
+  <nav class="railnav" id="rail" aria-label="Sections">
+    <div class="rail-group">Fleet setup</div>
+    <button class="rail-item" type="button" data-page="servers" aria-current="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></svg>Servers &amp; network</button>
+    <button class="rail-item" type="button" data-page="baseline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Baseline settings</button>
+    <button class="rail-item" type="button" data-page="files"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>Layouts &amp; images</button>
+    <div class="rail-group">Servers<span class="rg-count" id="railCount"></span></div>
+    <div id="psSideList"></div>
+    <div class="rail-group">Output</div>
+    <button class="rail-item" type="button" data-page="package"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Package</button>
+    <div class="rail-foot">
+      <div class="rail-ver">DreamCatcher Base Config Builder<br>EFP packages for DreamCatcher servers</div>
+    </div>
+  </nav>
+
+  <main class="content">
+    <div class="wrap">
+      <div class="masthead">
+        <h1 id="pageTitle">Servers &amp; network</h1>
+        <span class="page-tag" id="pageTag"></span>
+        <div class="masthead-actions" id="mastActions">
+          <button class="tool-reset-btn" type="button" id="psClearAllBtn" hidden>↺ Clear all overrides</button>
+        </div>
+      </div>
+
+      <div class="layout">
+        <div class="pages">
+
+          <div class="page active" data-page="servers">
       <div class="card" id="timezoneCard">
         <div class="card-head">
           <div class="card-head-left">
@@ -471,8 +340,7 @@
         </div>
       </div>
 
-      <!-- BULK DEPLOYMENT -->
-      <div class="card">
+      <div class="card" id="bulkCard">
         <div class="card-head">
           <span class="section-tag">Bulk deployment</span>
           <span class="section-sub">/etc/hostname · /etc/netplan/01-netcfg.yaml</span>
@@ -511,7 +379,6 @@
         </div>
       </div>
 
-      <!-- MATROX PORTS -->
       <div class="card" id="matroxCard">
         <div class="card-head">
           <span class="section-tag">Matrox network ports</span>
@@ -522,8 +389,17 @@
         </div>
       </div>
 
+          </div>
 
-      <!-- SYSTEM -->
+          <div class="page" data-page="baseline">
+            <div class="tabbar">
+              <div class="seg tabs" id="baselineTabs" role="tablist">
+                <button type="button" role="tab" data-tab="system" aria-selected="true">System settings</button>
+                <button type="button" role="tab" data-tab="features" aria-selected="false">features.conf</button>
+                <button type="button" role="tab" data-tab="services" aria-selected="false">Linux services</button>
+              </div>
+            </div>
+            <div class="tabpanel active" data-tab="system">
       <div class="card" id="systemCard">
         <div class="card-head">
           <div class="card-head-left">
@@ -548,48 +424,6 @@
         </div>
       </div>
 
-      <!-- FEATURES -->
-      <div class="card" id="featuresCard">
-        <div class="card-head">
-          <div class="card-head-left">
-            <input type="checkbox" class="section-toggle" id="toggleFeatures" checked>
-            <span class="section-tag">features.conf</span>
-          </div>
-          <span class="section-sub">toggle true / false per flag</span>
-        </div>
-        <div class="card-body" id="featureToggles"></div>
-      </div>
-
-      <!-- PER-SERVER OVERRIDES -->
-      <div class="card" id="perServerCard">
-        <div class="card-head">
-          <span class="section-tag">Per-server settings</span>
-          <span class="section-sub">inputs/outputs, [System] and features per server</span>
-        </div>
-        <div class="card-body">
-          <p class="ps-hint">
-            The [System] and features.conf values above are the baseline for every server.
-            Change a value here to pin it for just that server (highlighted in amber, ↺ puts it back
-            on the baseline). Pinned values stay put if you change the baseline later.
-            Color space, transfer, bit rate, proxies, codec, video standard and audio channels are global only (shown greyed out). The server selected here is the one shown in the install preview.
-          </p>
-          <div class="srv-table-wrap">
-            <table class="srv-table">
-              <thead id="psOverviewHead"></thead>
-              <tbody id="psOverviewBody"></tbody>
-            </table>
-          </div>
-          <button class="btn-secondary" id="psClearAllBtn">↺ Clear all per-server overrides</button>
-
-          <div class="field" style="margin-top:16px;">
-            <label>Edit server</label>
-            <select id="psServerSelect"></select>
-          </div>
-          <div id="psDetail"></div>
-        </div>
-      </div>
-
-      <!-- RENDER DELAY -->
       <div class="card" id="renderDelayCard">
         <div class="card-head">
           <div class="card-head-left">
@@ -603,7 +437,56 @@
         </div>
       </div>
 
-      <!-- LAYOUTS -->
+            </div>
+            <div class="tabpanel" data-tab="features">
+      <div class="card" id="featuresCard">
+        <div class="card-head">
+          <div class="card-head-left">
+            <input type="checkbox" class="section-toggle" id="toggleFeatures" checked>
+            <span class="section-tag">features.conf</span>
+          </div>
+          <span class="section-sub">toggle true / false per flag</span>
+        </div>
+        <div class="card-body" id="featureToggles"></div>
+      </div>
+
+            </div>
+            <div class="tabpanel" data-tab="services">
+      <div class="card" id="firewallCard">
+        <div class="card-head">
+          <span class="section-tag">Linux services</span>
+          <span class="section-sub">run on the target at install</span>
+        </div>
+        <div class="card-body">
+          <div class="toggle-row" style="border-bottom:none; padding-top:0;">
+            <div class="toggle-label">turn off firewall</div>
+            <label class="switch">
+              <input type="checkbox" id="toggleFirewall" checked>
+              <span class="track"><span class="knob"></span></span>
+            </label>
+          </div>
+          <p class="ps-hint" style="margin:0 0 14px;">
+            Runs <code>ufw disable</code>, then <code>systemctl disable dcsfirewall.service</code> so it stays off.
+          </p>
+          <div class="toggle-row" style="border-bottom:none; padding-top:0;">
+            <div class="toggle-label">mask timemaster (SDI systems)</div>
+            <label class="switch">
+              <input type="checkbox" id="toggleTimemaster">
+              <span class="track"><span class="knob"></span></span>
+            </label>
+          </div>
+          <p class="ps-hint" style="margin:0;">
+            Runs <code>systemctl mask timemaster</code> on servers where input and output are both SDI.
+            SMPTE 2110 servers are always skipped.
+            <span id="timemasterCount"></span>
+          </p>
+        </div>
+      </div>
+
+            </div>
+          </div>
+
+          <div class="page" data-page="files">
       <div class="card" id="layoutsCard">
         <div class="card-head">
           <div class="card-head-left">
@@ -621,7 +504,6 @@
         </div>
       </div>
 
-      <!-- IMAGES -->
       <div class="card" id="imagesCard">
         <div class="card-head">
           <div class="card-head-left">
@@ -639,30 +521,28 @@
         </div>
       </div>
 
-
-      <!-- FIREWALL -->
-      <div class="card" id="firewallCard">
-        <div class="card-head">
-          <span class="section-tag">Linux firewall</span>
-          <span class="section-sub">runs on the target at install</span>
-        </div>
-        <div class="card-body">
-          <div class="toggle-row" style="border-bottom:none; padding-top:0;">
-            <div class="toggle-label">turn off firewall (ufw / firewalld)</div>
-            <label class="switch">
-              <input type="checkbox" id="toggleFirewall" checked>
-              <span class="track"><span class="knob"></span></span>
-            </label>
           </div>
-          <p class="ps-hint" style="margin:6px 0 0;">
-            Stops and disables <code>ufw</code> (and <code>firewalld</code> if present) so it stays off after reboot.
-            The exact commands show in the install preview.
-          </p>
+
+          <div class="page" data-page="server">
+      <div class="card" id="perServerCard">
+        <div class="card-head">
+          <span class="section-tag">Per-server settings</span>
+          <span class="section-sub">pinned values override the baseline</span>
         </div>
+        <p class="ps-hint">
+          Pick a server in the rail to see and edit its own config. The [System], features.conf and Linux services values on
+          <b>Baseline settings</b> apply to every server; change a value here to pin it for just this one
+          (amber, ↺ puts it back on the baseline; pinned values stay put if the baseline changes later).
+          Color space, transfer, bit rate, proxies, codec, video standard and audio channels are global only (greyed out).
+          The server you pick is also the one shown in the install preview.
+        </p>
+        <section class="ps-main" id="psDetail"></section>
       </div>
 
-      <!-- PACKAGE INFO -->
-      <div class="card">
+          </div>
+
+          <div class="page" data-page="package">
+      <div class="card" id="packageCard">
         <div class="card-head">
           <span class="section-tag">info</span>
           <span class="section-sub">EFP package metadata</span>
@@ -681,34 +561,27 @@
         </div>
       </div>
 
-    </div>
+          </div>
 
-    <!-- PREVIEW / GENERATE -->
-    <div>
-      <div class="term">
-        <div class="term-head">
-          <div class="term-dot" style="background:var(--tally-red)"></div>
-          <div class="term-dot" style="background:var(--amber)"></div>
-          <div class="term-dot" style="background:var(--tally-green)"></div>
-          <div class="term-title">install — preview</div>
         </div>
-        <div class="preview-select-wrap">
-          <select id="previewSelect"></select>
-        </div>
-        <div class="term-body" id="preview"></div>
-      </div>
 
-      <div class="generate-bar">
-        <button class="btn-generate" id="generateBtn">↓ Generate deployment package</button>
-        <div style="display:flex; gap:8px;">
-          <button class="btn-secondary" id="saveCfgBtn" style="flex:1; margin-top:0;">↓ Save config (.json)</button>
-          <button class="btn-secondary" id="loadCfgBtn" style="flex:1; margin-top:0;">↑ Load config</button>
-          <input type="file" id="loadCfgInput" accept=".json,application/json" style="display:none;">
-        </div>
-        <div class="status-line" id="statusLine"></div>
+        <aside class="preview-col">
+          <div class="term">
+            <div class="term-head">
+              <div class="term-dot" style="background:#d32f2f"></div>
+              <div class="term-dot" style="background:#e8a21a"></div>
+              <div class="term-dot" style="background:#3f9b66"></div>
+              <div class="term-title">install — preview</div>
+            </div>
+            <div class="preview-select-wrap">
+              <select id="previewSelect"></select>
+            </div>
+            <div class="term-body" id="preview"></div>
+          </div>
+        </aside>
       </div>
     </div>
-  </div>
+  </main>
 </div>
 
 <div id="tipBox"></div>
@@ -812,7 +685,7 @@ const IFACE_DEFS = [
 
 let state = {
   timezone: 'America/New_York',
-  sections: { timezone:true, hostname:true, firewall:true, system:true, features:true, renderDelay:true, layouts:true, images:true },
+  sections: { timezone:true, hostname:true, firewall:true, timemaster:false, system:true, features:true, renderDelay:true, layouts:true, images:true },
   ifaces: {}, // key -> { enabled, base }
   bulk: {
     prefix: 'REPLAY-',
@@ -828,6 +701,7 @@ let state = {
   layoutFiles: [], // { name, bytes: Uint8Array }
   imageFiles: [] // { name, bytes: Uint8Array }
 };
+const DEFAULT_SECTIONS = Object.assign({}, state.sections);   // what a fresh page starts with (used when loading older configs)
 SYSTEM_FIELDS.forEach(f => state.system[f.key] = f.def);
 RENDER_DELAY_FIELDS.forEach(f => state.renderDelay[f.key] = f.def);
 IFACE_DEFS.forEach(f => state.ifaces[f.key] = { enabled: f.defaultEnabled, base: f.defaultBase, gateway: f.defaultGateway || '' });
@@ -931,7 +805,7 @@ function regenerateCascade(){
     const ips = {};
     IFACE_DEFS.forEach(def => { ips[def.key] = incrementIp(state.ifaces[def.key].base, i); });
     // per-server overrides are config, not addressing - carry them over by position
-    const overrides = (prev[i] && prev[i].overrides) ? prev[i].overrides : { system:{}, features:{} };
+    const overrides = (prev[i] && prev[i].overrides) ? prev[i].overrides : emptyOverrides();
     servers.push({ hostname: `${prefix}${start + i}`, ips, overrides });
   }
   state.bulk.servers = servers;
@@ -1043,7 +917,7 @@ document.getElementById('addServerBtn').addEventListener('click', () => {
   IFACE_DEFS.forEach(def => {
     ips[def.key] = last ? incrementIp(last.ips[def.key], 1) : state.ifaces[def.key].base;
   });
-  state.bulk.servers.push({ hostname: nextHostname, ips, overrides: { system:{}, features:{} } });
+  state.bulk.servers.push({ hostname: nextHostname, ips, overrides: emptyOverrides() });
   syncRemotesToServerCount();
   renderServerTable();
   renderPreviewSelect(true);
@@ -1067,10 +941,19 @@ const PS_IO_KEYS = ['ninputs', 'nsdioutputs', 'nmontageoutputs'];
 const PS_GLOBAL_ONLY = ['color_space', 'transfer_characteristic', 'bit_rate', 'proxies_enabled',
                         'video_codec', 'video_standard', 'num_audio_channels'];
 
+function emptyOverrides(){ return { system:{}, features:{}, services:{} }; }
 function getSrvOverrides(srv){
-  if (!srv.overrides) srv.overrides = { system:{}, features:{} };
+  if (!srv.overrides) srv.overrides = emptyOverrides();
+  if (!srv.overrides.services) srv.overrides.services = {};   // older saved configs have none
   return srv.overrides;
 }
+// Linux services (the on/off switches on the Linux services tab) can be pinned per server too
+const SERVICE_DEFS = [
+  { key:'firewall',   label:'turn off firewall',              cmd:'ufw disable, then systemctl disable dcsfirewall.service' },
+  { key:'timemaster', label:'mask timemaster (SDI systems)',  cmd:'systemctl mask timemaster - only where input and output are both SDI' }
+];
+function isSvcPinned(srv, key){ return has(getSrvOverrides(srv).services, key); }
+function svcVal(srv, key){ return isSvcPinned(srv, key) ? !!srv.overrides.services[key] : !!state.sections[key]; }
 function has(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
 // SMPTE 2110 timing is PTP - ltc / ltc_anc are only valid when input AND output are SDI
 const TS_PTP = 'ptppts';
@@ -1100,7 +983,15 @@ function psEl(tag, cls, text){
 function psCurrent(){ return state.bulk.servers[state.bulk.previewIndex]; }
 function psCount(srv){
   const o = getSrvOverrides(srv);
-  return Object.keys(o.system).filter(k => isSysPinned(srv, k)).length + Object.keys(o.features).length;
+  return Object.keys(o.system).filter(k => isSysPinned(srv, k)).length + Object.keys(o.features).length + Object.keys(o.services).length;
+}
+function psTabCounts(srv){
+  const o = getSrvOverrides(srv);
+  return {
+    system: Object.keys(o.system).filter(k => isSysPinned(srv, k)).length,
+    features: Object.keys(o.features).length,
+    services: Object.keys(o.services).length
+  };
 }
 function psSummary(srv){
   const o = getSrvOverrides(srv);
@@ -1111,79 +1002,121 @@ function psSummary(srv){
   Object.keys(FEATURE_DEFAULTS).forEach(k => {
     if (has(o.features, k)) parts.push(`${k.replace(/^FEATURE_/, '')}=${o.features[k] ? 'True' : 'False'}`);
   });
+  SERVICE_DEFS.forEach(d => {
+    if (has(o.services, d.key)) parts.push(`${d.key}=${o.services[d.key] ? 'on' : 'off'}`);
+  });
   return parts.length ? parts.join(' · ') : '—';
 }
-function psAfterChange(){ updateJpegxsNotice(); renderPreview(); }
-
-/* ----- overview table: inputs/outputs by server ----- */
-function renderPsOverview(){
-  const head = document.getElementById('psOverviewHead');
-  const body = document.getElementById('psOverviewBody');
-  head.innerHTML = '';
-  body.innerHTML = '';
-  const htr = document.createElement('tr');
-  htr.innerHTML = '<th></th><th>hostname</th>' +
-    PS_IO_KEYS.map(k => `<th>${k}<span class="gl">baseline ${state.system[k]}</span></th>`).join('') +
-    '<th>other overrides</th><th></th>';
-  head.appendChild(htr);
-
-  state.bulk.servers.forEach((srv, idx) => {
-    const tr = document.createElement('tr');
-    if (idx === state.bulk.previewIndex) tr.className = 'ps-sel';
-    tr.appendChild(psEl('td', 'idx', String(idx + 1)));
-    tr.appendChild(psEl('td', null, srv.hostname));
-
-    const sumTd = psEl('td', 'ps-sum', psSummary(srv));
-    PS_IO_KEYS.forEach(key => {
-      const td = document.createElement('td');
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.className = 'num' + (isSysPinned(srv, key) ? ' ovr' : '');
-      input.value = sysVal(srv, key);
-      input.addEventListener('input', () => {
-        if (input.value === '') return;               // mid-edit; keep the previous value
-        getSrvOverrides(srv).system[key] = input.value;
-        input.classList.add('ovr');
-        sumTd.textContent = psSummary(srv);
-        if (idx === state.bulk.previewIndex) renderPsDetail();
-        psAfterChange();
-      });
-      td.appendChild(input);
-      tr.appendChild(td);
-    });
-    tr.appendChild(sumTd);
-
-    const actTd = document.createElement('td');
-    const edit = psEl('button', 'btn-mini', 'edit ›');
-    edit.style.padding = '5px 10px';
-    edit.addEventListener('click', () => {
-      psSelect(idx);
-      document.getElementById('psServerSelect').scrollIntoView({ behavior:'smooth', block:'nearest' });
-    });
-    actTd.appendChild(edit);
-    tr.appendChild(actTd);
-    body.appendChild(tr);
+function updatePsTabCounts(){
+  const srv = psCurrent();
+  if (!srv) return;
+  const c = psTabCounts(srv);
+  document.querySelectorAll('#psDetail .tabs button').forEach(btn => {
+    const n = btn.querySelector('.tab-n');
+    if (n) n.textContent = c[btn.dataset.tab] ? String(c[btn.dataset.tab]) : '';
   });
 }
+function psAfterChange(){ updatePsTabCounts(); updateJpegxsNotice(); renderPreview(); }
+
+/* ----- sidebar: one entry per server; click to see/edit its config ----- */
+function updatePsSubtitle(){
+  const el = document.querySelector('#psDetail .ps-subtitle');
+  const srv = psCurrent();
+  if (!el || !srv) return;
+  const n = psCount(srv);
+  el.textContent = n ? `${n} pinned value${n === 1 ? '' : 's'}` : 'follows the baseline';
+}
+const SERVER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01M11 7h6M11 17h6"/></svg>';
+
+function renderPsSide(){
+  updatePsSubtitle();
+  const list = document.getElementById('psSideList');
+  const hadFocus = list.contains(document.activeElement);
+  list.innerHTML = '';
+  const rc = document.getElementById('railCount');
+  if (rc) rc.textContent = String(state.bulk.servers.length);
+  if (!state.bulk.servers.length) list.appendChild(psEl('div', 'rail-empty', 'no servers yet'));
+  state.bulk.servers.forEach((srv, idx) => {
+    const isSel = idx === state.bulk.previewIndex;
+    const item = psEl('button', 'rail-item ps-item' + (isSel ? ' sel' : ''));
+    item.type = 'button';
+    item.title = psSummary(srv) === '—' ? 'no overrides - follows the baseline' : 'pinned: ' + psSummary(srv);
+    if (isSel && state.page === 'server') item.setAttribute('aria-current', 'true');
+
+    item.insertAdjacentHTML('beforeend', SERVER_ICON);
+    const txt = psEl('span', 'ps-txt');
+    txt.appendChild(psEl('span', 'nm', srv.hostname));
+    txt.appendChild(psEl('span', 'meta',
+      `in ${sysVal(srv, 'ninputs')} · out ${sysVal(srv, 'nsdioutputs')} · mont ${sysVal(srv, 'nmontageoutputs')}`));
+    item.appendChild(txt);
+    const n = psCount(srv);
+    if (n) item.appendChild(psEl('span', 'ps-badge', String(n)));
+
+    item.addEventListener('click', () => { psSelect(idx); showPage('server'); });
+    item.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      const next = idx + (e.key === 'ArrowDown' ? 1 : -1);
+      if (next >= 0 && next < state.bulk.servers.length) { psSelect(next); if (state.page === 'server') updateMasthead(); }
+    });
+    list.appendChild(item);
+  });
+  if (hadFocus) {
+    const sel = list.querySelector('.ps-item.sel');
+    if (sel) sel.focus();
+  }
+}
+
+/* ----- page navigation (left rail) ----- */
+const PAGES = {
+  servers:  { title:'Servers & network', tag:'/etc/hostname · /etc/netplan/01-netcfg.yaml · /etc/timezone' },
+  baseline: { title:'Baseline settings', tag:'/etc/dreamcatcher.ini · /etc/features.conf · render_delay.json' },
+  files:    { title:'Layouts & images',  tag:'/etc/vue/layouts/ · /etc/vue/images/' },
+  server:   { title:'Server',            tag:'per-server settings' },
+  package:  { title:'Package',           tag:'EFP package metadata' }
+};
+function updateMasthead(){
+  const page = state.page || 'servers';
+  const def = PAGES[page];
+  let title = def.title;
+  let tag = def.tag;
+  if (page === 'server') {
+    const srv = psCurrent();
+    title = srv ? srv.hostname : 'No servers';
+    const n = state.bulk.servers.length;
+    tag = srv ? `server ${state.bulk.previewIndex + 1} of ${n} · per-server settings` : def.tag;
+  }
+  document.getElementById('pageTitle').textContent = title;
+  document.getElementById('pageTag').textContent = tag;
+  document.getElementById('psClearAllBtn').hidden = page !== 'server';
+}
+function updateRailCurrent(){
+  document.querySelectorAll('#rail .rail-item[data-page]').forEach(btn => {
+    if (btn.dataset.page === state.page) btn.setAttribute('aria-current', 'true');
+    else btn.removeAttribute('aria-current');
+  });
+  document.querySelectorAll('#psSideList .ps-item').forEach((btn, idx) => {
+    if (state.page === 'server' && idx === state.bulk.previewIndex) btn.setAttribute('aria-current', 'true');
+    else btn.removeAttribute('aria-current');
+  });
+}
+function showPage(name){
+  if (!PAGES[name]) name = 'servers';
+  state.page = name;
+  document.querySelectorAll('.page').forEach(pg => pg.classList.toggle('active', pg.dataset.page === name));
+  updateRailCurrent();
+  updateMasthead();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('#rail .rail-item[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => showPage(btn.dataset.page));
+});
 
 function psSelect(idx){
   state.bulk.previewIndex = idx;
   document.getElementById('previewSelect').value = String(idx);
   renderPerServer();
   renderPreview();
-}
-
-function renderPsSelect(){
-  const sel = document.getElementById('psServerSelect');
-  sel.innerHTML = '';
-  state.bulk.servers.forEach((srv, idx) => {
-    const opt = document.createElement('option');
-    opt.value = idx;
-    const n = psCount(srv);
-    opt.textContent = n ? `${srv.hostname}  (${n} override${n === 1 ? '' : 's'})` : srv.hostname;
-    sel.appendChild(opt);
-  });
-  sel.value = String(state.bulk.previewIndex);
 }
 
 /* ----- detail: every [System] field + feature for the selected server ----- */
@@ -1194,32 +1127,71 @@ function renderPsDetail(){
   if (!srv){ box.appendChild(psEl('p', 'ps-hint', 'no servers yet')); return; }
   const o = getSrvOverrides(srv);
 
+  state.tabs = state.tabs || { baseline:'system', server:'system' };
   const head = psEl('div', 'ps-head');
-  head.appendChild(psEl('div', 'ps-title', srv.hostname));
+  const nOv = psCount(srv);
+  const titleBox = psEl('div');
+  titleBox.appendChild(psEl('div', 'ps-title', srv.hostname));
+  titleBox.appendChild(psEl('div', 'ps-subtitle', nOv ? `${nOv} pinned value${nOv === 1 ? '' : 's'}` : 'follows the baseline'));
+  head.appendChild(titleBox);
   const resetAll = psEl('button', 'btn-mini', '↺ reset this server to baseline');
   resetAll.style.padding = '5px 10px';
   resetAll.addEventListener('click', () => {
-    srv.overrides = { system:{}, features:{} };
+    srv.overrides = emptyOverrides();
     renderPerServer();
     psAfterChange();
   });
   head.appendChild(resetAll);
   box.appendChild(head);
 
-  // [System]
+  // three tabs, same split as the Baseline page
+  const TAB_DEFS = [['system', 'System settings'], ['features', 'features.conf'], ['services', 'Linux services']];
+  const counts = psTabCounts(srv);
+  const tabbar = psEl('div', 'tabbar');
+  const seg = psEl('div', 'seg tabs');
+  seg.setAttribute('role', 'tablist');
+  const panels = {};
+  TAB_DEFS.forEach(([key, label]) => {
+    const btn = psEl('button', null);
+    btn.type = 'button';
+    btn.dataset.tab = key;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', state.tabs.server === key ? 'true' : 'false');
+    btn.appendChild(document.createTextNode(label));
+    btn.appendChild(psEl('span', 'tab-n', counts[key] ? String(counts[key]) : ''));
+    btn.addEventListener('click', () => {
+      state.tabs.server = key;
+      seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === key ? 'true' : 'false'));
+      Object.keys(panels).forEach(k => panels[k].classList.toggle('active', k === key));
+    });
+    seg.appendChild(btn);
+    const panel = psEl('div', 'tabpanel' + (state.tabs.server === key ? ' active' : ''));
+    panel.dataset.tab = key;
+    panels[key] = panel;
+  });
+  tabbar.appendChild(seg);
+  box.appendChild(tabbar);
+  TAB_DEFS.forEach(([key]) => box.appendChild(panels[key]));
+  let svcUpdate = () => {};   // re-evaluates the Linux services status lines when this server's formats change
+
+  // inputs / outputs, then the rest of [System]
+  const ioSub = psEl('div', 'ps-sub', 'Inputs / outputs');
+  if (!state.sections.system) ioSub.appendChild(psEl('span', 'off', '— [System] section is off, not applied'));
+  panels.system.appendChild(ioSub);
+  const ioGrid = psEl('div', 'ps-io');
+  panels.system.appendChild(ioGrid);
   const sysSub = psEl('div', 'ps-sub', '[System]');
-  if (!state.sections.system) sysSub.appendChild(psEl('span', 'off', '— section is off, not applied'));
-  box.appendChild(sysSub);
+  panels.system.appendChild(sysSub);
   const grid = psEl('div', 'grid2');
   let tsDecor = null;   // re-evaluates the time_source control when this server's formats change
   SYSTEM_FIELDS.forEach(f => {
     const wrap = psEl('div', 'field');
     const label = document.createElement('label');
     const keySpan = psEl('span', 'key', f.key);
-    const note = psEl('span', 'ps-note');
+    const note = psEl('span', 'ps-note ps-foot');   // sits under the input so labels stay on one line
     const reset = psEl('button', 'ps-reset', '↺');
     reset.title = 'back to baseline';
-    label.appendChild(keySpan); label.appendChild(note); label.appendChild(reset);
+    label.appendChild(keySpan); label.appendChild(reset);
     wrap.appendChild(label);
 
     let input;
@@ -1236,6 +1208,7 @@ function renderPsDetail(){
     }
     input.value = sysVal(srv, f.key);
     wrap.appendChild(input);
+    wrap.appendChild(note);
 
     if (PS_GLOBAL_ONLY.includes(f.key)) {
       input.disabled = true;
@@ -1276,7 +1249,8 @@ function renderPsDetail(){
       o.system[f.key] = input.value;
       decor();
       if (isFmt && tsDecor) tsDecor();
-      renderPsOverview(); renderPsSelect();
+      if (isFmt) svcUpdate();
+      renderPsSide();
       psAfterChange();
     });
     reset.addEventListener('click', () => {
@@ -1284,18 +1258,19 @@ function renderPsDetail(){
       input.value = state.system[f.key];
       decor();
       if (isFmt && tsDecor) tsDecor();
-      renderPsOverview(); renderPsSelect();
+      if (isFmt) svcUpdate();
+      renderPsSide();
       psAfterChange();
     });
     decor();
-    grid.appendChild(wrap);
+    (PS_IO_KEYS.includes(f.key) ? ioGrid : grid).appendChild(wrap);
   });
-  box.appendChild(grid);
+  panels.system.appendChild(grid);
 
   // features.conf
   const featSub = psEl('div', 'ps-sub', 'features.conf');
   if (!state.sections.features) featSub.appendChild(psEl('span', 'off', '— section is off, not applied'));
-  box.appendChild(featSub);
+  panels.features.appendChild(featSub);
   Object.keys(FEATURE_DEFAULTS).forEach(key => {
     const row = psEl('div', 'toggle-row');
     const left = psEl('div');
@@ -1324,37 +1299,109 @@ function renderPsDetail(){
     cb.addEventListener('change', () => {
       o.features[key] = cb.checked;
       decor();
-      renderPsOverview(); renderPsSelect();
+      renderPsSide();
       psAfterChange();
     });
     reset.addEventListener('click', () => {
       delete o.features[key];
       cb.checked = !!state.features[key];
       decor();
-      renderPsOverview(); renderPsSelect();
+      renderPsSide();
       psAfterChange();
     });
     decor();
-    box.appendChild(row);
+    panels.features.appendChild(row);
+  });
+
+  // render_delay.json: global only, shown so every server's page carries the full picture
+  const rdSub = psEl('div', 'ps-sub', 'render_delay.json');
+  if (!state.sections.renderDelay) rdSub.appendChild(psEl('span', 'off', '— section is off, not applied'));
+  panels.system.appendChild(rdSub);
+  const rdGrid = psEl('div', 'grid2');
+  RENDER_DELAY_FIELDS.forEach(f => {
+    const wrap = psEl('div', 'field');
+    const label = document.createElement('label');
+    label.appendChild(psEl('span', 'key', f.key));
+    wrap.appendChild(label);
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.value = state.renderDelay[f.key];
+    input.disabled = true;
+    wrap.appendChild(input);
+    wrap.appendChild(psEl('span', 'ps-note ps-foot', 'global only'));
+    wrap.style.opacity = '0.6';
+    rdGrid.appendChild(wrap);
+  });
+  panels.system.appendChild(rdGrid);
+
+  // Linux services: this server's own on/off, plus what will actually happen to it
+  const svcSub = psEl('div', 'ps-sub', 'Linux services');
+  panels.services.appendChild(svcSub);
+  SERVICE_DEFS.forEach(def => {
+    const row = psEl('div', 'toggle-row');
+    const left = psEl('div');
+    left.appendChild(psEl('span', 'toggle-label', def.label));
+    const note = psEl('span', 'ps-note');
+    const reset = psEl('button', 'ps-reset', '↺');
+    reset.title = 'back to baseline';
+    left.appendChild(note); left.appendChild(reset);
+    const sw = psEl('label', 'switch');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = svcVal(srv, def.key);
+    const track = psEl('span', 'track');
+    track.appendChild(psEl('span', 'knob'));
+    sw.appendChild(cb); sw.appendChild(track);
+    row.appendChild(left); row.appendChild(sw);
+    panels.services.appendChild(row);
+    const detail = psEl('p', 'ps-hint');
+    detail.style.margin = '2px 0 10px';
+    panels.services.appendChild(detail);
+
+    function status(){
+      if (!svcVal(srv, def.key)) return 'off - nothing will run on this server';
+      if (def.key === 'timemaster' && tsLocked(srv)) return 'on, but skipped: this server is SMPTE 2110 (input or output)';
+      return 'on - will run on this server';
+    }
+    function decor(){
+      const pinned = isSvcPinned(srv, def.key);
+      row.classList.toggle('ovr', pinned);
+      note.textContent = pinned ? `baseline: ${state.sections[def.key] ? 'on' : 'off'}` : '';
+      reset.style.display = pinned ? '' : 'none';
+      detail.textContent = `Runs ${def.cmd}. Status: ${status()}.`;
+    }
+    const prevSvc = svcUpdate;
+    svcUpdate = () => { prevSvc(); decor(); };
+    cb.addEventListener('change', () => {
+      getSrvOverrides(srv).services[def.key] = cb.checked;
+      decor();
+      renderPsSide();
+      psAfterChange();
+    });
+    reset.addEventListener('click', () => {
+      delete getSrvOverrides(srv).services[def.key];
+      cb.checked = !!state.sections[def.key];
+      decor();
+      renderPsSide();
+      psAfterChange();
+    });
+    decor();
   });
 }
 
 function renderPerServer(){
   const n = state.bulk.servers.length;
   if (state.bulk.previewIndex >= n) state.bulk.previewIndex = 0;
-  renderPsOverview();
-  renderPsSelect();
+  renderPsSide();
   renderPsDetail();
+  updateMasthead();
 }
 
-document.getElementById('psServerSelect').addEventListener('change', e => {
-  psSelect(parseInt(e.target.value, 10) || 0);
-});
 document.getElementById('psClearAllBtn').addEventListener('click', () => {
   const total = state.bulk.servers.reduce((n, srv) => n + psCount(srv), 0);
   if (total === 0) return;
   if (!confirm(`Clear ${total} per-server override${total === 1 ? '' : 's'} across all servers?`)) return;
-  state.bulk.servers.forEach(srv => { srv.overrides = { system:{}, features:{} }; });
+  state.bulk.servers.forEach(srv => { srv.overrides = emptyOverrides(); });
   renderPerServer();
   renderPreview();
 });
@@ -1660,6 +1707,18 @@ document.getElementById('toggleFirewall').addEventListener('change', e => {
   state.sections.firewall = e.target.checked;
   renderPreview();
 });
+document.getElementById('toggleTimemaster').addEventListener('change', e => {
+  state.sections.timemaster = e.target.checked;
+  renderPreview();
+});
+function updateTimemasterNote(){
+  const el = document.getElementById('timemasterCount');
+  if (!el) return;
+  if (!state.sections.timemaster) { el.textContent = ''; return; }
+  const total = state.bulk.servers.length;
+  const n = state.bulk.servers.filter(srv => !tsLocked(srv)).length;
+  el.textContent = `Applies to ${n} of ${total} server${total === 1 ? '' : 's'} right now.`;
+}
 wireSectionToggle('toggleRenderDelay', 'renderDelayCard', 'renderDelay');
 wireSectionToggle('toggleLayouts', 'layoutsCard', 'layouts');
 wireSectionToggle('toggleImages', 'imagesCard', 'images');
@@ -1705,19 +1764,17 @@ function buildInstallScript(server){
     lines.push('');
   }
 
-  if (sec.firewall) {
+  if (svcVal(server, 'firewall')) {
     lines.push('echo "Disabling Linux firewall..."');
-    lines.push('if command -v ufw >/dev/null 2>&1; then');
-    lines.push('  ufw --force disable || true');
-    lines.push('fi');
-    lines.push('systemctl stop ufw 2>/dev/null || true');
-    lines.push('systemctl disable ufw 2>/dev/null || true');
-    lines.push('if systemctl list-unit-files 2>/dev/null | grep -q "^firewalld"; then');
-    lines.push('  systemctl stop firewalld 2>/dev/null || true');
-    lines.push('  systemctl disable firewalld 2>/dev/null || true');
-    lines.push('fi');
-    lines.push('echo "Firewall status:"');
-    lines.push('ufw status 2>/dev/null || echo "  ufw not installed"');
+    lines.push('ufw disable 2>/dev/null || echo "  ufw not installed (skipped)"');
+    lines.push('systemctl disable dcsfirewall.service 2>/dev/null || echo "  dcsfirewall.service not found (skipped)"');
+    lines.push('');
+  }
+
+  // timemaster is only wanted on SDI systems (SMPTE 2110 needs it for PTP) - skip any 2110 server
+  if (svcVal(server, 'timemaster') && !tsLocked(server)) {
+    lines.push('echo "Masking timemaster (SDI system)..."');
+    lines.push('systemctl mask timemaster 2>/dev/null || echo "  could not mask timemaster (skipped)"');
     lines.push('');
   }
 
@@ -2032,6 +2089,7 @@ function buildInstallScript(server){
    Preview rendering (diff-styled, read-only)
 --------------------------------------------------------- */
 function renderPreview(){
+  updateTimemasterNote();
   const server = state.bulk.servers[state.bulk.previewIndex] || state.bulk.servers[0];
   const script = buildInstallScript(server);
   const el = document.getElementById('preview');
@@ -2214,7 +2272,7 @@ function downloadBlob(data, filename, mime){
 const CONFIG_APP = 'dc-configurator';
 const CONFIG_VERSION = 1;
 const SECTION_TOGGLE_IDS = {
-  timezone:'toggleTimezone', hostname:'toggleHostname', firewall:'toggleFirewall',
+  timezone:'toggleTimezone', hostname:'toggleHostname', firewall:'toggleFirewall', timemaster:'toggleTimemaster',
   system:'toggleSystem', features:'toggleFeatures', renderDelay:'toggleRenderDelay',
   layouts:'toggleLayouts', images:'toggleImages'
 };
@@ -2306,7 +2364,10 @@ function applyConfig(cfg){
       ips[def.key] = (srv.ips && srv.ips[def.key] !== undefined) ? srv.ips[def.key] : incrementIp(state.ifaces[def.key].base, i);
     });
     const ov = srv.overrides || {};
-    const overrides = { system:{}, features:{} };
+    const overrides = emptyOverrides();
+    Object.keys(ov.services || {}).forEach(k => {
+      if (SERVICE_DEFS.some(d => d.key === k)) overrides.services[k] = !!ov.services[k];
+    });
     Object.keys(ov.system || {}).forEach(k => {
       if (sysKeys.includes(k) && !PS_GLOBAL_ONLY.includes(k)) overrides.system[k] = String(ov.system[k]);
     });
@@ -2345,7 +2406,7 @@ function applyConfig(cfg){
   // section on/off switches last (their handlers re-render the preview)
   Object.keys(SECTION_TOGGLE_IDS).forEach(key => {
     const cb = document.getElementById(SECTION_TOGGLE_IDS[key]);
-    if (cfg.sections && cfg.sections[key] !== undefined) cb.checked = !!cfg.sections[key];
+    cb.checked = (cfg.sections && cfg.sections[key] !== undefined) ? !!cfg.sections[key] : DEFAULT_SECTIONS[key];
     cb.dispatchEvent(new Event('change', { bubbles: true }));
   });
   renderPerServer();
@@ -2425,6 +2486,43 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
     console.error(err);
   }
 });
+
+/* ---------------------------------------------------------
+   Baseline tabs: System settings / features.conf / Linux services
+--------------------------------------------------------- */
+function showBaselineTab(key){
+  state.tabs = state.tabs || { baseline:'system', server:'system' };
+  state.tabs.baseline = key;
+  document.querySelectorAll('#baselineTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === key ? 'true' : 'false'));
+  document.querySelectorAll('.page[data-page="baseline"] > .tabpanel').forEach(pn => pn.classList.toggle('active', pn.dataset.tab === key));
+}
+document.querySelectorAll('#baselineTabs button').forEach(b => b.addEventListener('click', () => showBaselineTab(b.dataset.tab)));
+
+/* ---------------------------------------------------------
+   Theme (light / dark) + sticky offsets, same behaviour as the Live-Media tools
+--------------------------------------------------------- */
+const themeSwitch = document.getElementById('themeSwitch');
+const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function isDark(){ const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : !!(darkQuery && darkQuery.matches); }
+function renderThemeSwitch(){ themeSwitch.setAttribute('aria-checked', isDark() ? 'true' : 'false'); }
+themeSwitch.addEventListener('click', () => {
+  const next = isDark() ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('lmmon-theme', next); } catch (e) {}
+  renderThemeSwitch();
+});
+if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', renderThemeSwitch);
+renderThemeSwitch();
+
+function setSubH(){
+  document.documentElement.style.setProperty('--bar-h', document.getElementById('identityBar').offsetHeight + 'px');
+  const sb = document.getElementById('subBar');
+  const sticky = sb && getComputedStyle(sb).position === 'sticky';
+  document.documentElement.style.setProperty('--sub-h', (sticky ? sb.offsetHeight : 0) + 'px');
+}
+window.addEventListener('resize', setSubH);
+setSubH();
+showPage('servers');
 </script>
 </body>
 </html>
